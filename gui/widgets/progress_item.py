@@ -1,7 +1,7 @@
 """Progress item widget for displaying task progress."""
 import customtkinter as ctk
 from typing import Literal
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 
 
 class ProgressItem(ctk.CTkFrame):

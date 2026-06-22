@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from tkinter import filedialog
 from typing import Optional, Callable, Literal
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 from gui.locales import FILESELECTOR
 
 

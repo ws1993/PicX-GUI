@@ -3,7 +3,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import subprocess
 import sys
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 from gui.locales import DOCTOR
 
 

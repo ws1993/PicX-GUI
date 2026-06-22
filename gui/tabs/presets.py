@@ -4,7 +4,7 @@ from tkinter import messagebox, filedialog
 from typing import Optional, Dict
 import json
 import os
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 from gui.locales import PRESETS as PRESETS_LOCALE, COMMON
 
 

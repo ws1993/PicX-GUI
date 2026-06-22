@@ -1,7 +1,7 @@
 """Drop zone widget for drag and drop file selection."""
 import customtkinter as ctk
 from typing import Optional, Callable, List
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 
 
 class DropZone(ctk.CTkFrame):

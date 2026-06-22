@@ -3,7 +3,7 @@ import customtkinter as ctk
 from tkinter import messagebox, filedialog
 from typing import Optional
 import json
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 from gui.widgets.file_selector import FileSelector
 from gui.widgets.progress_item import ProgressItem
 from gui.utils.validators import (

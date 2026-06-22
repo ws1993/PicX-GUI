@@ -1,7 +1,7 @@
 """PicX GUI Main Application."""
 import customtkinter as ctk
 from gui.locales import MAIN_WINDOW, TABS
-from gui.styles.theme import COLORS, FONTS, SIZES, apply_theme
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING, apply_theme
 
 
 class PicXApp(ctk.CTk):
@@ -10,8 +10,8 @@ class PicXApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        # Apply theme
-        apply_theme("light")
+        # Apply theme (light mode only)
+        apply_theme()
         
         # Configure window
         self.title(MAIN_WINDOW["title"])
@@ -42,9 +42,9 @@ class PicXApp(ctk.CTk):
         
     def _create_header(self):
         """Create application header."""
-        header = ctk.CTkFrame(self, fg_color=COLORS["dark_block"], corner_radius=0)
+        header = ctk.CTkFrame(self, fg_color=COLORS["header_bg"], corner_radius=0)
         header.grid(row=0, column=0, sticky="ew")
-        header.grid_columnconfigure(1, weight=1)
+        header.grid_columnconfigure(0, weight=1)
         
         # App title
         title = ctk.CTkLabel(
@@ -53,7 +53,7 @@ class PicXApp(ctk.CTk):
             font=FONTS["heading"],
             text_color="white"
         )
-        title.grid(row=0, column=0, padx=SIZES["padding"], pady=(SIZES["padding"], 5))
+        title.grid(row=0, column=0, padx=SIZES["padding"], pady=(SIZES["padding"], 5), sticky="w")
         
         # Subtitle
         subtitle = ctk.CTkLabel(
@@ -62,20 +62,7 @@ class PicXApp(ctk.CTk):
             font=FONTS["small"],
             text_color="#AAAAAA"
         )
-        subtitle.grid(row=1, column=0, padx=SIZES["padding"], pady=(0, SIZES["padding"]))
-        
-        # Theme toggle button
-        self.theme_mode = "light"
-        self.theme_btn = ctk.CTkButton(
-            header,
-            text=MAIN_WINDOW["theme_dark"],
-            width=100,
-            height=30,
-            fg_color=COLORS["primary"],
-            hover_color=COLORS["primary_hover"],
-            command=self._toggle_theme
-        )
-        self.theme_btn.grid(row=0, column=1, rowspan=2, padx=SIZES["padding"], pady=SIZES["padding"], sticky="e")
+        subtitle.grid(row=1, column=0, padx=SIZES["padding"], pady=(0, SIZES["padding"]), sticky="w")
         
     def _create_tab_view(self):
         """Create tab view for different features."""
@@ -152,17 +139,6 @@ class PicXApp(ctk.CTk):
         self.bind("<F1>", lambda e: self._show_help())
         self.bind("<F5>", lambda e: self._refresh())
         
-    def _toggle_theme(self):
-        """Toggle between light and dark theme."""
-        if self.theme_mode == "light":
-            self.theme_mode = "dark"
-            apply_theme("dark")
-            self.theme_btn.configure(text=MAIN_WINDOW["theme_light"])
-        else:
-            self.theme_mode = "light"
-            apply_theme("light")
-            self.theme_btn.configure(text=MAIN_WINDOW["theme_dark"])
-            
     def _switch_to_tab(self, tab_name):
         """Switch to specified tab."""
         self.tab_view.set(tab_name)

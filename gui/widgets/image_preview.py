@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from typing import Optional, Tuple
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 
 
 class ImagePreview(ctk.CTkFrame):

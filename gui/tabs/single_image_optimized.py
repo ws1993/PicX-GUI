@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from typing import Optional
-from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
 from gui.widgets.file_selector import FileSelector
 from gui.widgets.progress_item import ProgressItem
 
