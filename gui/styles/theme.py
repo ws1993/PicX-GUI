@@ -98,9 +98,13 @@ def apply_theme(mode="light"):
     ctk.set_appearance_mode("light")
     
     # Use Breeze theme from CTkThemesPack
-    theme_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "themes", "breeze.json")
+    # Get absolute path to themes directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    theme_path = os.path.join(project_root, "themes", "breeze.json")
+    
     if os.path.exists(theme_path):
         ctk.set_default_color_theme(theme_path)
     else:
-        # Fallback to default blue theme
-        ctk.set_default_color_theme("blue")
+        # Fallback to built-in green theme
+        ctk.set_default_color_theme("green")
