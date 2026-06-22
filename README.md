@@ -2,6 +2,8 @@
 
 A modern graphical user interface for [PicX](https://github.com/ingeniousfrog/picx), a Python image optimization toolkit.
 
+English | [中文](README_CN.md)
+
 ## Features
 
 - **Single Image Compression** - Optimize individual images with full control
@@ -68,21 +70,49 @@ python main.py
 
 ### Windows
 
+**Quick Build:**
 ```bash
-build_windows.bat
+build.bat
+```
+
+**Advanced Build (with libvips):**
+```bash
+# 1. Download and configure libvips
+python setup_libvips.py
+
+# 2. Build with libvips support
+build.bat
 ```
 
 The executable will be created in `dist\PicX-GUI\PicX-GUI.exe`
 
-Package size:
-- With libvips: ~60-80MB
-- Without libvips: ~40-50MB
+**Package size:**
+- With libvips: ~60-80MB (full format support)
+- Without libvips: ~40-50MB (basic format support)
 
-Users don't need to install Python or any dependencies.
+### macOS
+
+```bash
+# Make script executable
+chmod +x build.sh
+
+# Run build
+./build.sh
+```
+
+### Linux
+
+```bash
+# Make script executable
+chmod +x build.sh
+
+# Run build
+./build.sh
+```
 
 ### Distribution
 
-Compress the entire `dist\PicX-GUI\` folder and distribute. Users can run `PicX-GUI.exe` directly.
+Compress the entire `dist\PicX-GUI\` folder (or `dist\PicX-GUI.app` on macOS) and distribute. Users can run the application directly without installing Python or any dependencies.
 
 ## Development
 

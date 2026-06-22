@@ -8,9 +8,9 @@ from pathlib import Path
 
 
 # libvips配置
-LIBVIPS_VERSION = "8.15.5"  # 可以修改为最新版本
-LIBVIPS_FILENAME = f"vips-dev-w64-all-{LIBVIPS_VERSION}.zip"
-LIBVIPS_URL = f"https://github.com/libvips/libvips/releases/download/v{LIBVIPS_VERSION}/{LIBVIPS_FILENAME}"
+LIBVIPS_VERSION = "8.16.0"  # 更新到最新稳定版本
+LIBVIPS_FILENAME = f"vips-dev-{LIBVIPS_VERSION}-win-x64.zip"  # 明确使用64位版本
+LIBVIPS_URL = f"https://github.com/libvips/build-win64-mxe/releases/download/v{LIBVIPS_VERSION}/{LIBVIPS_FILENAME}"
 LIBVIPS_DIR = Path("libs/libvips")
 
 

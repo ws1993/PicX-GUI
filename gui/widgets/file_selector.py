@@ -3,6 +3,7 @@ import customtkinter as ctk
 from tkinter import filedialog
 from typing import Optional, Callable, Literal
 from gui.styles.theme import COLORS, FONTS, SIZES
+from gui.locales import FILESELECTOR
 
 
 class FileSelector(ctk.CTkFrame):
@@ -30,7 +31,7 @@ class FileSelector(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         
         self.mode = mode
-        self.filetypes = filetypes or [("All files", "*.*")]
+        self.filetypes = filetypes or [(FILESELECTOR["all_files"], "*.*")]
         self.on_change_callback = on_change
         
         # Configure grid
@@ -52,7 +53,7 @@ class FileSelector(ctk.CTkFrame):
             textvariable=self.path_var,
             font=FONTS["body"],
             height=SIZES["entry_height"],
-            placeholder_text="No file selected" if mode != "directory" else "No directory selected"
+            placeholder_text=FILESELECTOR["no_file"] if mode != "directory" else FILESELECTOR["no_dir"]
         )
         self.path_entry.grid(row=0, column=1, padx=SIZES["padding_small"], sticky="ew")
         
@@ -62,7 +63,7 @@ class FileSelector(ctk.CTkFrame):
         # Browse button
         self.browse_button = ctk.CTkButton(
             self,
-            text="Browse...",
+            text=FILESELECTOR["browse"],
             width=100,
             height=SIZES["button_height"],
             command=self._browse,
@@ -76,16 +77,16 @@ class FileSelector(ctk.CTkFrame):
         """Open file/directory dialog."""
         if self.mode == "file":
             path = filedialog.askopenfilename(
-                title="Select a file",
+                title=FILESELECTOR["dialog_select"],
                 filetypes=self.filetypes
             )
         elif self.mode == "directory":
             path = filedialog.askdirectory(
-                title="Select a directory"
+                title=FILESELECTOR["dialog_dir"]
             )
         elif self.mode == "save":
             path = filedialog.asksaveasfilename(
-                title="Save as",
+                title=FILESELECTOR["dialog_save"],
                 filetypes=self.filetypes
             )
         else:
