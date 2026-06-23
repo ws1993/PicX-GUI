@@ -1,110 +1,177 @@
-"""Theme configuration for PicX GUI."""
-import customtkinter as ctk
-import os
+"""Theme configuration for PicX GUI - Flet version."""
+import flet as ft
+from typing import Dict, Any
 
-# Color scheme - Optimized for better coordination and contrast
+
+# 主题颜色配置
 COLORS = {
-    # Primary colors - warmer, more cohesive amber palette
-    "primary": "#D4943A",      # Slightly warmer amber
-    "primary_hover": "#C08430", # Darker hover state
-    "primary_light": "#E8B882", # Lighter variant
-    "primary_disabled": "#D4B896", # Disabled state
+    # 主色调 - 琥珀色系
+    "primary": ft.Colors.AMBER,
+    "primary_hover": ft.Colors.AMBER_700,
+    "primary_light": ft.Colors.AMBER_100,
+    "primary_disabled": ft.Colors.AMBER_200,
     
-    # Background and surface colors - better hierarchy
-    "background": "#F8F4EE",    # Lighter, more neutral background
-    "surface": "#FDF9F3",      # Clean surface
-    "surface_light": "#FFFFFF", # Pure white for cards
-    "surface_dark": "#F0E8D8", # Slightly darker surface
-    "border": "#E8E0D4",       # Softer border
-    "border_light": "#F0E8DC", # Lighter border variant
+    # 背景和表面颜色
+    "background": ft.Colors.GREY_50,
+    "surface": ft.Colors.WHITE,
+    "surface_light": ft.Colors.GREY_50,
+    "surface_dark": ft.Colors.GREY_100,
+    "border": ft.Colors.GREY_300,
+    "border_light": ft.Colors.GREY_200,
     
-    # Text colors - better contrast hierarchy
-    "text": "#2D2A26",         # Darker for better contrast
-    "text_secondary": "#5A5650", # Secondary text
-    "text_muted": "#8A8478",   # Muted text
-    "accent_tint": "#F5E6D0",  # Accent tint
+    # 文本颜色
+    "text": ft.Colors.GREY_900,
+    "text_secondary": ft.Colors.GREY_700,
+    "text_muted": ft.Colors.GREY_500,
     
-    # Header background
-    "header_bg": "#2A2723",
-    
-    # Status colors - more refined
-    "success": "#4CAF50",
-    "success_light": "#E8F5E9",
-    "warning": "#FF9800",
-    "warning_light": "#FFF3E0",
-    "error": "#F44336",
-    "error_light": "#FFEBEE",
-    "info": "#2196F3",
-    "info_light": "#E3F2FD",
+    # 状态颜色
+    "success": ft.Colors.GREEN,
+    "success_light": ft.Colors.GREEN_100,
+    "warning": ft.Colors.ORANGE,
+    "warning_light": ft.Colors.ORANGE_100,
+    "error": ft.Colors.RED,
+    "error_light": ft.Colors.RED_100,
+    "info": ft.Colors.BLUE,
+    "info_light": ft.Colors.BLUE_100,
 }
 
-# Font configuration - Improved for Chinese text and hierarchy
+# 深色主题颜色
+DARK_COLORS = {
+    # 主色调 - 琥珀色系
+    "primary": ft.Colors.AMBER,
+    "primary_hover": ft.Colors.AMBER_300,
+    "primary_light": ft.Colors.AMBER_900,
+    "primary_disabled": ft.Colors.AMBER_800,
+    
+    # 背景和表面颜色
+    "background": ft.Colors.GREY_900,
+    "surface": ft.Colors.GREY_800,
+    "surface_light": ft.Colors.GREY_700,
+    "surface_dark": ft.Colors.GREY_900,
+    "border": ft.Colors.GREY_700,
+    "border_light": ft.Colors.GREY_800,
+    
+    # 文本颜色
+    "text": ft.Colors.WHITE,
+    "text_secondary": ft.Colors.GREY_300,
+    "text_muted": ft.Colors.GREY_500,
+    
+    # 状态颜色
+    "success": ft.Colors.GREEN_300,
+    "success_light": ft.Colors.GREEN_900,
+    "warning": ft.Colors.ORANGE_300,
+    "warning_light": ft.Colors.ORANGE_900,
+    "error": ft.Colors.RED_300,
+    "error_light": ft.Colors.RED_900,
+    "info": ft.Colors.BLUE_300,
+    "info_light": ft.Colors.BLUE_900,
+}
+
+# 字体配置
 FONTS = {
-    # Headings - using system fonts for better Chinese support
-    "heading": ("Microsoft YaHei", 20, "bold"),  # Better Chinese support
-    "subheading": ("Microsoft YaHei", 16, "bold"),
-    "title": ("Microsoft YaHei", 14, "bold"),
-    
-    # Body text - clear hierarchy
-    "body": ("Microsoft YaHei", 11),
-    "body_bold": ("Microsoft YaHei", 11, "bold"),
-    "small": ("Microsoft YaHei", 10),
-    "small_bold": ("Microsoft YaHei", 10, "bold"),
-    
-    # Button text - consistent with body
-    "button": ("Microsoft YaHei", 11, "bold"),
-    "button_large": ("Microsoft YaHei", 13, "bold"),
-    
-    # Monospace for paths and technical info
-    "mono": ("Consolas", 11),
+    "heading": 24,
+    "subheading": 18,
+    "title": 16,
+    "body": 14,
+    "body_bold": 14,
+    "small": 12,
+    "caption": 10,
 }
 
-# Spacing configuration - Unified spacing system
-SPACING = {
-    "xs": 4,
-    "sm": 8,
-    "md": 12,
-    "lg": 16,
-    "xl": 20,
-    "xxl": 24,
-    "xxxl": 32,
-}
-
-# Size configuration - Consistent sizing
+# 尺寸配置
 SIZES = {
     "window_width": 1200,
     "window_height": 800,
-    "min_width": 1000,  # Slightly larger minimum
-    "min_height": 700,
+    "min_width": 800,
+    "min_height": 600,
     "padding": 20,
     "padding_small": 10,
-    "button_height": 36,
-    "button_height_large": 44,
-    "entry_height": 32,
-    "corner_radius": 8,
-    "corner_radius_large": 12,
-    "border_width": 1,
+    "corner_radius": 10,
+    "icon_size": 24,
+}
+
+# 间距配置
+SPACING = {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
 }
 
 
-def apply_theme(mode="light"):
-    """
-    Apply theme to CustomTkinter.
+class ThemeManager:
+    """Theme manager for handling light/dark themes."""
     
-    Args:
-        mode: Only "light" is supported (dark mode removed)
-    """
-    # Always use light mode
-    ctk.set_appearance_mode("light")
-    
-    # Use Breeze theme from CTkThemesPack
-    # Get absolute path to themes directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(current_dir))
-    theme_path = os.path.join(project_root, "themes", "breeze.json")
-    
-    if os.path.exists(theme_path):
-        ctk.set_default_color_theme(theme_path)
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.is_dark_mode = False
+        self.current_colors = COLORS
+        
+    def toggle_theme(self):
+        """Toggle between light and dark theme."""
+        self.is_dark_mode = not self.is_dark_mode
+        self.apply_theme()
+        return self.is_dark_mode
+        
+    def set_theme(self, dark_mode: bool):
+        """Set theme mode."""
+        self.is_dark_mode = dark_mode
+        self.apply_theme()
+        
+    def apply_theme(self):
+        """Apply current theme to page."""
+        if self.is_dark_mode:
+            self.page.theme_mode = ft.ThemeMode.DARK
+            self.current_colors = DARK_COLORS
+        else:
+            self.page.theme_mode = ft.ThemeMode.LIGHT
+            self.current_colors = COLORS
+            
+        self.page.theme = ft.Theme(
+            color_scheme_seed=self.current_colors["primary"],
+            visual_density=ft.VisualDensity.COMFORTABLE,
+            font_family="Microsoft YaHei",
+        )
+        self.page.update()
+        
+    def get_color(self, color_name: str) -> str:
+        """Get color by name."""
+        return self.current_colors.get(color_name, COLORS.get(color_name))
+        
+    def get_theme_info(self) -> Dict[str, Any]:
+        """Get current theme information."""
+        return {
+            "is_dark_mode": self.is_dark_mode,
+            "theme_mode": "dark" if self.is_dark_mode else "light",
+            "primary_color": self.current_colors["primary"],
+        }
+
+
+def get_theme():
+    """Get Flet theme configuration."""
+    return ft.Theme(
+        color_scheme_seed=COLORS["primary"],
+        visual_density=ft.VisualDensity.COMFORTABLE,
+        font_family="Microsoft YaHei",
+    )
+
+
+def get_dark_theme():
+    """Get dark theme configuration."""
+    return ft.Theme(
+        color_scheme_seed=DARK_COLORS["primary"],
+        visual_density=ft.VisualDensity.COMFORTABLE,
+        font_family="Microsoft YaHei",
+    )
+
+
+def apply_theme(page: ft.Page, dark_mode: bool = False):
+    """Apply theme to page."""
+    if dark_mode:
+        page.theme_mode = ft.ThemeMode.DARK
+        page.theme = get_dark_theme()
     else:
-        # Fallback to built-in green theme
-        ctk.set_default_color_theme("green")
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.theme = get_theme()
+    page.update()

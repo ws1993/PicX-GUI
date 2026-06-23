@@ -1,22 +1,12 @@
-"""Batch directory processing tab."""
-import customtkinter as ctk
-from tkinter import messagebox
-from typing import Optional, List
-from gui.styles.theme import COLORS, FONTS, SIZES, SPACING
-from gui.widgets.file_selector import FileSelector
-from gui.widgets.progress_item import ProgressItem
-from gui.locales import COMMON, BATCH
-from gui.utils.validators import (
-    validate_quality,
-    validate_dimensions,
-    validate_target_size,
-    validate_jobs,
-    validate_directory_path
-)
+"""Batch processing tab."""
+import flet as ft
+import os
+import threading
+from typing import List, Dict, Any
 
 
-class BatchTab(ctk.CTkFrame):
-    """Tab for batch directory processing."""
+class BatchTab:
+    """Tab for batch image processing."""
     
     # PicX presets
     PRESETS = {
@@ -27,572 +17,530 @@ class BatchTab(ctk.CTkFrame):
         "lossless": {"format": "png", "quality": 100},
     }
     
-    FORMATS = ["webp", "jpg", "png", "avif", "tiff"]
+    FORMATS = ["保持原格式", "webp", "jpg", "png", "avif", "tiff"]
     BACKENDS = ["auto", "pillow", "pyvips"]
     
-    def __init__(self, master, app_instance, **kwargs):
-        super().__init__(master, fg_color="transparent", **kwargs)
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.source_dir = ""
+        self.output_dir = ""
+        self.files: List[str] = []
+        self.is_processing = False
+        self.stop_processing = False
         
-        self.app = app_instance
-        self.current_task = None
-        self.results: List[dict] = []
+        # UI components
+        self.source_field = None
+        self.output_field = None
+        self.file_list_text = None
+        self.file_count_text = None
+        self.preset_dropdown = None
+        self.format_dropdown = None
+        self.quality_slider = None
+        self.quality_text = None
+        self.max_width_field = None
+        self.max_height_field = None
+        self.backend_dropdown = None
+        self.overwrite_checkbox = None
+        self.keep_structure_checkbox = None
+        self.progress_bar = None
+        self.status_text = None
+        self.result_text = None
         
-        # Configure grid
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
-        # Create UI
-        self._create_input_section()
-        self._create_params_section()
-        self._create_action_section()
-        self._create_result_section()
+    def build(self):
+        """Build the tab content."""
+        return ft.Container(
+            content=ft.Column([
+                # 输入目录选择
+                self._create_input_section(),
+                # 批量处理参数
+                self._create_params_section(),
+                # 文件列表
+                self._create_file_list_section(),
+                # 操作按钮
+                self._create_action_section(),
+                # 进度和结果
+                self._create_progress_section(),
+            ], spacing=15, scroll=ft.ScrollMode.AUTO),
+            padding=20,
+        )
         
     def _create_input_section(self):
-        """Create directory input section."""
-        input_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        input_frame.grid(row=0, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
-        input_frame.grid_columnconfigure(0, weight=1)
-        
-        # Title
-        title = ctk.CTkLabel(
-            input_frame,
-            text=COMMON["input_output_dirs"],
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+        """Create input section."""
+        # 源目录选择
+        self.source_field = ft.TextField(
+            label="源目录",
+            hint_text="选择图片目录",
+            expand=True,
+            read_only=True,
         )
-        title.grid(row=0, column=0, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
         
-        # Input directory selector
-        self.input_selector = FileSelector(
-            input_frame,
-            mode="directory",
-            label_text=BATCH["input_dir"]
+        # 输出目录选择
+        self.output_field = ft.TextField(
+            label="输出目录",
+            hint_text="选择保存目录",
+            expand=True,
+            read_only=True,
         )
-        self.input_selector.grid(row=1, column=0, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
         
-        # Output directory selector
-        self.output_selector = FileSelector(
-            input_frame,
-            mode="directory",
-            label_text=BATCH["output_dir"]
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("输入目录", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    ft.Row([
+                        self.source_field,
+                        ft.ElevatedButton(
+                            "浏览...",
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=self._select_source_dir,
+                        ),
+                    ]),
+                    ft.Row([
+                        self.output_field,
+                        ft.ElevatedButton(
+                            "浏览...",
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=self._select_output_dir,
+                        ),
+                    ]),
+                ], spacing=10),
+                padding=20,
+            )
         )
-        self.output_selector.grid(row=2, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
         
     def _create_params_section(self):
-        """Create parameters configuration section."""
-        params_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        params_frame.grid(row=1, column=0, sticky="nsew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        params_frame.grid_columnconfigure(0, weight=1)
-        params_frame.grid_columnconfigure(1, weight=1)
-        
-        # Title
-        title = ctk.CTkLabel(
-            params_frame,
-            text=COMMON["compression_params"],
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+        """Create parameters section."""
+        # 预设选择
+        self.preset_dropdown = ft.Dropdown(
+            width=200,
+            options=[ft.dropdown.Option(name) for name in self.PRESETS.keys()],
+            value="Custom",
+            on_select=self._on_preset_changed,
         )
-        title.grid(row=0, column=0, columnspan=2, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
         
-        current_row = 1
-        
-        # Preset selection
-        preset_label = ctk.CTkLabel(params_frame, text=COMMON["preset"], font=FONTS["body"])
-        preset_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.preset_var = ctk.StringVar(value=COMMON["custom"])
-        preset_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.preset_var,
-            values=list(self.PRESETS.keys()),
-            command=self._on_preset_changed,
-            fg_color=COLORS["primary"],
-            button_color=COLORS["primary_hover"]
+        # 输出格式
+        self.format_dropdown = ft.Dropdown(
+            width=150,
+            options=[ft.dropdown.Option(fmt) for fmt in self.FORMATS],
+            value="保持原格式",
         )
-        preset_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Output format
-        format_label = ctk.CTkLabel(params_frame, text=COMMON["output_format"], font=FONTS["body"])
-        format_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.format_var = ctk.StringVar(value="webp")
-        format_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.format_var,
-            values=self.FORMATS
+        # 质量滑块
+        self.quality_slider = ft.Slider(
+            min=1,
+            max=100,
+            value=82,
+            divisions=99,
+            label="{value}%",
+            on_change=self._on_quality_changed,
         )
-        format_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Quality slider
-        quality_label = ctk.CTkLabel(params_frame, text=COMMON["quality"], font=FONTS["body"])
-        quality_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
+        self.quality_text = ft.Text("82%", width=50, weight=ft.FontWeight.BOLD)
         
-        quality_container = ctk.CTkFrame(params_frame, fg_color="transparent")
-        quality_container.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        quality_container.grid_columnconfigure(0, weight=1)
-        
-        self.quality_var = ctk.IntVar(value=82)
-        self.quality_slider = ctk.CTkSlider(
-            quality_container,
-            from_=1,
-            to=100,
-            variable=self.quality_var,
-            number_of_steps=99,
-            progress_color=COLORS["primary"]
+        # 最大宽度
+        self.max_width_field = ft.TextField(
+            value="1920",
+            width=100,
+            text_align=ft.TextAlign.RIGHT,
+            hint_text="留空保持原尺寸",
         )
-        self.quality_slider.grid(row=0, column=0, sticky="ew", padx=(0, SIZES["padding_small"]))
         
-        self.quality_label = ctk.CTkLabel(quality_container, text="82", font=FONTS["body_bold"], width=40)
-        self.quality_label.grid(row=0, column=1)
-        self.quality_var.trace_add("write", lambda *args: self.quality_label.configure(text=str(self.quality_var.get())))
-        current_row += 1
-        
-        # Max width
-        width_label = ctk.CTkLabel(params_frame, text=COMMON["max_width"], font=FONTS["body"])
-        width_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.max_width_var = ctk.StringVar(value="")
-        width_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.max_width_var,
-            placeholder_text=COMMON["leave_empty"],
-            height=SIZES["entry_height"]
+        # 最大高度
+        self.max_height_field = ft.TextField(
+            value="",
+            width=100,
+            text_align=ft.TextAlign.RIGHT,
+            hint_text="留空保持原尺寸",
         )
-        width_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Max height
-        height_label = ctk.CTkLabel(params_frame, text=COMMON["max_height"], font=FONTS["body"])
-        height_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.max_height_var = ctk.StringVar(value="")
-        height_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.max_height_var,
-            placeholder_text=COMMON["leave_empty"],
-            height=SIZES["entry_height"]
+        # 后端选择
+        self.backend_dropdown = ft.Dropdown(
+            width=150,
+            options=[ft.dropdown.Option(backend) for backend in self.BACKENDS],
+            value="auto",
         )
-        height_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Target size
-        target_label = ctk.CTkLabel(params_frame, text=COMMON["target_size"], font=FONTS["body"])
-        target_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
+        # 复选框
+        self.overwrite_checkbox = ft.Checkbox(label="覆盖现有文件", value=False)
+        self.keep_structure_checkbox = ft.Checkbox(label="保留目录结构", value=True)
         
-        self.target_size_var = ctk.StringVar(value="")
-        target_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.target_size_var,
-            placeholder_text=COMMON["target_hint"],
-            height=SIZES["entry_height"]
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("批量处理参数", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    # 预设选择
+                    ft.Row([
+                        ft.Text("预设:", width=100),
+                        self.preset_dropdown,
+                    ]),
+                    # 输出格式
+                    ft.Row([
+                        ft.Text("输出格式:", width=100),
+                        self.format_dropdown,
+                    ]),
+                    # 质量滑块
+                    ft.Row([
+                        ft.Text("质量:", width=100),
+                        self.quality_slider,
+                        self.quality_text,
+                    ]),
+                    # 最大宽度
+                    ft.Row([
+                        ft.Text("最大宽度:", width=100),
+                        self.max_width_field,
+                        ft.Text("像素"),
+                    ]),
+                    # 最大高度
+                    ft.Row([
+                        ft.Text("最大高度:", width=100),
+                        self.max_height_field,
+                        ft.Text("像素"),
+                    ]),
+                    # 后端选择
+                    ft.Row([
+                        ft.Text("处理后端:", width=100),
+                        self.backend_dropdown,
+                    ]),
+                    # 复选框
+                    ft.Row([
+                        self.overwrite_checkbox,
+                        self.keep_structure_checkbox,
+                    ]),
+                ], spacing=10),
+                padding=20,
+            )
         )
-        target_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Backend selection
-        backend_label = ctk.CTkLabel(params_frame, text=COMMON["backend"], font=FONTS["body"])
-        backend_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
+    def _create_file_list_section(self):
+        """Create file list section."""
+        self.file_count_text = ft.Text("0 个文件", color=ft.Colors.GREY_500)
+        self.file_list_text = ft.Text("请先选择源目录", color=ft.Colors.GREY_500)
         
-        self.backend_var = ctk.StringVar(value="auto")
-        backend_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.backend_var,
-            values=self.BACKENDS
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text("文件列表", size=16, weight=ft.FontWeight.BOLD),
+                        self.file_count_text,
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Divider(),
+                    ft.Container(
+                        content=ft.Column([self.file_list_text], spacing=5),
+                        height=200,
+                        bgcolor=ft.Colors.GREY_50,
+                        border_radius=10,
+                        padding=10,
+                    ),
+                ], spacing=10),
+                padding=20,
+            )
         )
-        backend_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Parallel jobs slider
-        jobs_label = ctk.CTkLabel(params_frame, text=BATCH["parallel_jobs"], font=FONTS["body"])
-        jobs_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        jobs_container = ctk.CTkFrame(params_frame, fg_color="transparent")
-        jobs_container.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        jobs_container.grid_columnconfigure(0, weight=1)
-        
-        self.jobs_var = ctk.IntVar(value=1)
-        self.jobs_slider = ctk.CTkSlider(
-            jobs_container,
-            from_=1,
-            to=16,
-            variable=self.jobs_var,
-            number_of_steps=15,
-            progress_color=COLORS["primary"]
-        )
-        self.jobs_slider.grid(row=0, column=0, sticky="ew", padx=(0, SIZES["padding_small"]))
-        
-        self.jobs_label = ctk.CTkLabel(jobs_container, text="1", font=FONTS["body_bold"], width=40)
-        self.jobs_label.grid(row=0, column=1)
-        self.jobs_var.trace_add("write", lambda *args: self.jobs_label.configure(text=str(self.jobs_var.get())))
-        current_row += 1
-        
-        # Strip metadata checkbox
-        self.strip_meta_var = ctk.BooleanVar(value=True)
-        strip_meta_check = ctk.CTkCheckBox(
-            params_frame,
-            text=COMMON["strip_metadata"],
-            variable=self.strip_meta_var,
-            font=FONTS["body"]
-        )
-        strip_meta_check.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Recursive checkbox
-        self.recursive_var = ctk.BooleanVar(value=True)
-        recursive_check = ctk.CTkCheckBox(
-            params_frame,
-            text=BATCH["recursive"],
-            variable=self.recursive_var,
-            font=FONTS["body"]
-        )
-        recursive_check.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Allow large images checkbox
-        self.allow_large_var = ctk.BooleanVar(value=False)
-        allow_large_check = ctk.CTkCheckBox(
-            params_frame,
-            text=COMMON["allow_large"],
-            variable=self.allow_large_var,
-            font=FONTS["body"]
-        )
-        allow_large_check.grid(row=current_row, column=0, columnspan=2, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
         
     def _create_action_section(self):
-        """Create action buttons section."""
-        action_frame = ctk.CTkFrame(self, fg_color="transparent")
-        action_frame.grid(row=2, column=0, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
+        """Create action section."""
+        return ft.Row([
+            ft.ElevatedButton(
+                "开始批量处理",
+                icon=ft.Icons.PLAY_ARROW,
+                on_click=self._start_batch,
+                style=ft.ButtonStyle(
+                    bgcolor=ft.Colors.AMBER,
+                    color=ft.Colors.WHITE,
+                ),
+            ),
+            ft.OutlinedButton(
+                "停止",
+                icon=ft.Icons.STOP,
+                on_click=self._stop_batch,
+            ),
+            ft.OutlinedButton(
+                "扫描文件",
+                icon=ft.Icons.REFRESH,
+                on_click=self._scan_files,
+            ),
+        ], alignment=ft.MainAxisAlignment.CENTER)
         
-        # Start button
-        self.start_button = ctk.CTkButton(
-            action_frame,
-            text=BATCH["start_batch"],
-            height=SIZES["button_height"] + 10,
-            command=self._start_batch,
-            fg_color=COLORS["primary"],
-            hover_color=COLORS["primary_hover"],
-            font=FONTS["button"]
+    def _create_progress_section(self):
+        """Create progress section."""
+        self.progress_bar = ft.ProgressBar(value=0, color=ft.Colors.AMBER)
+        self.status_text = ft.Text("等待开始...", color=ft.Colors.GREY_500)
+        self.result_text = ft.Text("")
+        
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("处理进度", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    self.progress_bar,
+                    self.status_text,
+                    self.result_text,
+                ], spacing=10),
+                padding=20,
+            )
         )
-        self.start_button.pack(side="left", padx=(0, SIZES["padding_small"]))
         
-        # Clear button
-        clear_button = ctk.CTkButton(
-            action_frame,
-            text=COMMON["clear"],
-            height=SIZES["button_height"] + 10,
-            command=self._clear_form,
-            fg_color=COLORS["text_muted"],
-            hover_color=COLORS["border"]
+    def _select_source_dir(self, e):
+        """Handle source directory selection."""
+        file_picker = ft.FilePicker(
+            on_result=self._on_source_dir_picked,
         )
-        clear_button.pack(side="left")
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        file_picker.get_directory_path()
         
-    def _create_result_section(self):
-        """Create result display section."""
-        self.result_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        self.result_frame.grid(row=3, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
-        
-        # Title with stats
-        title_frame = ctk.CTkFrame(self.result_frame, fg_color="transparent")
-        title_frame.pack(fill="x", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
-        
-        title = ctk.CTkLabel(
-            title_frame,
-            text=COMMON["result"],
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+    def _on_source_dir_picked(self, e):
+        """Handle source directory picked."""
+        if e.path:
+            self.source_dir = e.path
+            self.source_field.value = self.source_dir
+            self.page.update()
+            self._scan_files(None)
+            
+    def _select_output_dir(self, e):
+        """Handle output directory selection."""
+        file_picker = ft.FilePicker(
+            on_result=self._on_output_dir_picked,
         )
-        title.pack(side="left")
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        file_picker.get_directory_path()
         
-        self.stats_label = ctk.CTkLabel(
-            title_frame,
-            text="",
-            font=FONTS["body"],
-            text_color=COLORS["text_muted"]
-        )
-        self.stats_label.pack(side="right")
-        
-        # Progress and results container
-        self.result_container = ctk.CTkScrollableFrame(
-            self.result_frame,
-            fg_color="transparent",
-            height=200
-        )
-        self.result_container.pack(fill="both", expand=True, padx=SIZES["padding"], pady=(0, SIZES["padding"]))
-        
-    def _on_preset_changed(self, preset_name: str):
-        """Handle preset selection change."""
-        if preset_name == "Custom":
+    def _on_output_dir_picked(self, e):
+        """Handle output directory picked."""
+        if e.path:
+            self.output_dir = e.path
+            self.output_field.value = self.output_dir
+            self.page.update()
+            
+    def _scan_files(self, e):
+        """Scan files in source directory."""
+        if not self.source_dir:
+            self._show_error("请先选择源目录")
             return
             
-        preset = self.PRESETS[preset_name]
+        # 支持的图片格式
+        image_extensions = {'.png', '.jpg', '.jpeg', '.webp', '.avif', '.tif', '.tiff'}
+        
+        # 扫描文件
+        self.files = []
+        for root, dirs, files in os.walk(self.source_dir):
+            for file in files:
+                if os.path.splitext(file)[1].lower() in image_extensions:
+                    self.files.append(os.path.join(root, file))
+        
+        # 更新UI
+        self.file_count_text.value = f"{len(self.files)} 个文件"
+        if self.files:
+            # 显示前10个文件
+            display_files = self.files[:10]
+            file_list = "\n".join([os.path.basename(f) for f in display_files])
+            if len(self.files) > 10:
+                file_list += f"\n... 还有 {len(self.files) - 10} 个文件"
+            self.file_list_text.value = file_list
+            self.file_list_text.color = ft.Colors.GREY_700
+        else:
+            self.file_list_text.value = "未找到图片文件"
+            self.file_list_text.color = ft.Colors.GREY_500
+            
+        self.page.update()
+        
+    def _on_preset_changed(self, e):
+        """Handle preset change."""
+        preset_name = e.control.value
+        preset = self.PRESETS.get(preset_name)
+        
         if preset:
-            self.format_var.set(preset.get("format", "webp"))
-            self.quality_var.set(preset.get("quality", 82))
-            self.max_width_var.set(str(preset["max_width"]) if "max_width" in preset else "")
-            self.max_height_var.set(str(preset["max_height"]) if "max_height" in preset else "")
+            # 更新格式
+            if "format" in preset:
+                self.format_dropdown.value = preset["format"]
             
-    def _validate_params(self) -> tuple[bool, Optional[str]]:
-        """Validate all parameters."""
-        # Validate input directory
-        input_dir = self.input_selector.get()
-        is_valid, error = validate_directory_path(input_dir, must_exist=True)
-        if not is_valid:
-            return False, error
+            # 更新质量
+            if "quality" in preset:
+                self.quality_slider.value = preset["quality"]
+                self.quality_text.value = f"{preset['quality']}%"
             
-        # Validate output directory (can be non-existent, will be created)
-        output_dir = self.output_selector.get()
-        if not output_dir:
-            return False, BATCH["output_dir_required"]
+            # 更新最大宽度
+            if "max_width" in preset:
+                self.max_width_field.value = str(preset["max_width"])
+            else:
+                self.max_width_field.value = ""
             
-        # Validate quality
-        is_valid, error = validate_quality(self.quality_var.get())
-        if not is_valid:
-            return False, error
+            # 更新最大高度
+            if "max_height" in preset:
+                self.max_height_field.value = str(preset["max_height"])
+            else:
+                self.max_height_field.value = ""
             
-        # Validate dimensions
-        max_width = None
-        max_height = None
+            self.page.update()
+            
+    def _on_quality_changed(self, e):
+        """Handle quality slider change."""
+        quality = int(e.control.value)
+        self.quality_text.value = f"{quality}%"
+        self.page.update()
         
-        if self.max_width_var.get():
-            try:
-                max_width = int(self.max_width_var.get())
-            except ValueError:
-                return False, "最大宽度必须是有效的整数"
-                
-        if self.max_height_var.get():
-            try:
-                max_height = int(self.max_height_var.get())
-            except ValueError:
-                return False, "最大高度必须是有效的整数"
-                
-        is_valid, error = validate_dimensions(max_width, max_height, self.format_var.get())
-        if not is_valid:
-            return False, error
-            
-        # Validate target size
-        if self.target_size_var.get():
-            try:
-                target_size = int(self.target_size_var.get())
-                is_valid, error = validate_target_size(target_size)
-                if not is_valid:
-                    return False, error
-            except ValueError:
-                return False, "目标大小必须是有效的整数"
-                
-        # Validate jobs
-        is_valid, error = validate_jobs(self.jobs_var.get())
-        if not is_valid:
-            return False, error
-            
-        return True, None
-        
-    def _start_batch(self):
-        """Start the batch processing."""
-        # Validate parameters
-        is_valid, error = self._validate_params()
-        if not is_valid:
-            messagebox.showerror(BATCH["validation_error"], error)
+    def _start_batch(self, e):
+        """Start batch processing."""
+        if not self.source_dir:
+            self._show_error("请选择源目录")
             return
             
-        # Collect parameters
-        params = self._collect_params()
+        if not self.output_dir:
+            self._show_error("请选择输出目录")
+            return
+            
+        if not self.files:
+            self._show_error("没有找到图片文件")
+            return
+            
+        # 获取参数
+        params = self._get_params()
         
-        # Update UI
-        self.start_button.configure(state="disabled", text=BATCH["processing"])
-        self.app.update_status(BATCH["batch_processing"])
+        # 更新状态
+        self.is_processing = True
+        self.stop_processing = False
+        self.status_text.value = "正在处理..."
+        self.status_text.color = ft.Colors.BLUE
+        self.progress_bar.value = 0
+        self.page.update()
         
-        # Clear previous results
-        for widget in self.result_container.winfo_children():
-            widget.destroy()
-        self.results = []
-        self.stats_label.configure(text="")
+        # 在后台线程中执行批量处理
+        threading.Thread(
+            target=self._process_batch,
+            args=(params,),
+            daemon=True,
+        ).start()
         
-        # Create progress item
-        self.current_task = ProgressItem(
-            self.result_container,
-            task_name=f"{BATCH['batch_task']}: {params['source_dir']}",
-            show_cancel=False
-        )
-        self.current_task.pack(fill="x", pady=SIZES["padding_small"])
-        self.current_task.set_status("processing", "正在处理...")
-        
-        # Run batch processing in background
-        self._run_batch(params)
-        
-    def _collect_params(self) -> dict:
-        """Collect all parameters into a dictionary."""
-        params = {
-            "source_dir": self.input_selector.get(),
-            "out": self.output_selector.get(),
-            "format": self.format_var.get(),
-            "quality": self.quality_var.get(),
-            "strip_meta": self.strip_meta_var.get(),
-            "recursive": self.recursive_var.get(),
-            "backend": self.backend_var.get(),
-            "allow_large": self.allow_large_var.get(),
-            "jobs": self.jobs_var.get(),
+    def _get_params(self):
+        """Get processing parameters."""
+        return {
+            "source_dir": self.source_dir,
+            "output_dir": self.output_dir,
+            "format": self.format_dropdown.value,
+            "quality": int(self.quality_slider.value),
+            "max_width": int(self.max_width_field.value) if self.max_width_field.value else None,
+            "max_height": int(self.max_height_field.value) if self.max_height_field.value else None,
+            "backend": self.backend_dropdown.value,
+            "overwrite": self.overwrite_checkbox.value,
+            "keep_structure": self.keep_structure_checkbox.value,
         }
         
-        if self.max_width_var.get():
-            params["max_width"] = int(self.max_width_var.get())
-        if self.max_height_var.get():
-            params["max_height"] = int(self.max_height_var.get())
-        if self.target_size_var.get():
-            params["target_size"] = int(self.target_size_var.get())
+    def _process_batch(self, params):
+        """Process batch in background thread."""
+        try:
+            total_files = len(self.files)
+            processed_files = 0
+            success_files = 0
+            error_files = 0
             
-        return params
-        
-    def _run_batch(self, params: dict):
-        """Run batch processing (placeholder - will be implemented with threading)."""
-        import threading
-        
-        def worker():
-            try:
-                # Import PicX
-                from picx import optimize_dir
-                
-                # Run optimization
-                results = optimize_dir(**params)
-                
-                # Update UI on success
-                self.after(0, lambda: self._on_batch_complete(results))
-            except Exception as e:
-                # Update UI on error
-                self.after(0, lambda: self._on_batch_error(str(e)))
-                
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        
-    def _on_batch_complete(self, results):
-        """Handle successful batch processing."""
-        self.start_button.configure(state="normal", text=BATCH["start_batch"])
-        self.app.update_status("批量处理完成")
-        
-        self.results = results
-        
-        if self.current_task:
-            # Count successes and errors
-            successes = sum(1 for r in results if not r.error)
-            errors = len(results) - successes
+            for i, file_path in enumerate(self.files):
+                if self.stop_processing:
+                    break
+                    
+                try:
+                    # 计算输出路径
+                    if params["keep_structure"]:
+                        # 保持目录结构
+                        rel_path = os.path.relpath(file_path, params["source_dir"])
+                        output_path = os.path.join(params["output_dir"], rel_path)
+                    else:
+                        # 扁平结构
+                        output_path = os.path.join(params["output_dir"], os.path.basename(file_path))
+                    
+                    # 修改扩展名
+                    if params["format"] != "保持原格式":
+                        output_path = os.path.splitext(output_path)[0] + f".{params['format']}"
+                    
+                    # 创建输出目录
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    
+                    # 检查是否覆盖
+                    if os.path.exists(output_path) and not params["overwrite"]:
+                        continue
+                    
+                    # 这里应该调用实际的图像处理后端
+                    # 示例：使用Pillow
+                    try:
+                        from PIL import Image
+                        
+                        # 打开图片
+                        img = Image.open(file_path)
+                        
+                        # 调整大小
+                        if params["max_width"] or params["max_height"]:
+                            width, height = img.size
+                            ratio = 1
+                            
+                            if params["max_width"] and width > params["max_width"]:
+                                ratio = params["max_width"] / width
+                                
+                            if params["max_height"] and height > params["max_height"]:
+                                height_ratio = params["max_height"] / height
+                                ratio = min(ratio, height_ratio)
+                            
+                            if ratio < 1:
+                                new_size = (int(width * ratio), int(height * ratio))
+                                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                        
+                        # 保存图片
+                        save_kwargs = {}
+                        if params["format"] in ["webp", "jpg", "jpeg"]:
+                            save_kwargs["quality"] = params["quality"]
+                        
+                        img.save(output_path, **save_kwargs)
+                        success_files += 1
+                        
+                    except ImportError:
+                        error_files += 1
+                        
+                except Exception as ex:
+                    error_files += 1
+                    
+                finally:
+                    processed_files += 1
+                    
+                    # 更新进度
+                    progress = processed_files / total_files
+                    self.progress_bar.value = progress
+                    self.status_text.value = f"正在处理... {processed_files}/{total_files}"
+                    self.page.update()
             
-            if errors == 0:
-                self.current_task.set_status("success", f"完成: {successes} 个文件")
-            else:
-                self.current_task.set_status("error", f"完成: {successes}, 失败: {errors}")
-                
-        # Update stats
-        total_original = sum(r.original_size for r in results if not r.error)
-        total_output = sum(r.output_size for r in results if not r.error)
-        savings = ((total_original - total_output) / total_original * 100) if total_original > 0 else 0
-        
-        self.stats_label.configure(
-            text=f"总计: {len(results)} 个文件 | 节省: {savings:.1f}%"
-        )
-        
-        # Show results in list (limited to first 10)
-        for i, result in enumerate(results[:10]):
-            if not result.error:
-                self._add_result_item(
-                    result.source_path,
-                    result.original_size,
-                    result.output_size,
-                    "success"
-                )
-            else:
-                self._add_result_item(
-                    result.source_path,
-                    0,
-                    0,
-                    "error",
-                    str(result.error)
-                )
-                
-        if len(results) > 10:
-            more_label = ctk.CTkLabel(
-                self.result_container,
-                text=f"... 还有 {len(results) - 10} 个文件",
-                font=FONTS["small"],
-                text_color=COLORS["text_muted"]
+            # 更新结果
+            self.result_text.value = (
+                f"批量处理完成！\n"
+                f"总文件数: {total_files}\n"
+                f"成功: {success_files}\n"
+                f"失败: {error_files}"
             )
-            more_label.pack(pady=SIZES["padding_small"])
+            self.result_text.color = ft.Colors.GREEN
             
-    def _add_result_item(self, filename: str, original_size: int, output_size: int, status: str, error_msg: str = ""):
-        """Add a result item to the list."""
-        item_frame = ctk.CTkFrame(self.result_container, fg_color=COLORS["surface_light"], corner_radius=4)
-        item_frame.pack(fill="x", pady=2)
+        except Exception as ex:
+            self.result_text.value = f"错误: {str(ex)}"
+            self.result_text.color = ft.Colors.RED
+            
+        finally:
+            self.is_processing = False
+            self.status_text.value = "完成"
+            self.status_text.color = ft.Colors.GREEN
+            self.progress_bar.value = 1.0
+            self.page.update()
+            
+    def _stop_batch(self, e):
+        """Stop batch processing."""
+        self.stop_processing = True
+        self.status_text.value = "正在停止..."
+        self.status_text.color = ft.Colors.ORANGE
+        self.page.update()
         
-        # Status icon
-        status_icon = "✓" if status == "success" else "✗"
-        icon_color = COLORS["success"] if status == "success" else COLORS["error"]
-        
-        icon_label = ctk.CTkLabel(
-            item_frame,
-            text=status_icon,
-            text_color=icon_color,
-            font=FONTS["body_bold"],
-            width=30
+    def _show_error(self, message):
+        """Show error message."""
+        dialog = ft.AlertDialog(
+            title=ft.Text("错误"),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton("确定", on_click=lambda e: self.page.close(dialog)),
+            ],
         )
-        icon_label.pack(side="left", padx=(10, 5), pady=5)
         
-        # Filename
-        name_label = ctk.CTkLabel(
-            item_frame,
-            text=filename,
-            font=FONTS["body"],
-            text_color=COLORS["text"],
-            anchor="w"
-        )
-        name_label.pack(side="left", fill="x", expand=True, padx=5, pady=5)
-        
-        # Size info
-        if status == "success" and original_size > 0:
-            original_mb = original_size / (1024 * 1024)
-            output_mb = output_size / (1024 * 1024)
-            savings = ((original_size - output_size) / original_size * 100) if original_size > 0 else 0
-            
-            size_text = f"{original_mb:.2f}MB → {output_mb:.2f}MB ({savings:.1f}%)"
-        else:
-            size_text = error_msg if error_msg else "处理失败"
-            
-        size_label = ctk.CTkLabel(
-            item_frame,
-            text=size_text,
-            font=FONTS["small"],
-            text_color=COLORS["text_muted"],
-            anchor="e"
-        )
-        size_label.pack(side="right", padx=(5, 10), pady=5)
-        
-    def _on_batch_error(self, error_msg: str):
-        """Handle batch processing error."""
-        self.start_button.configure(state="normal", text=BATCH["start_batch"])
-        self.app.update_status("批量处理失败")
-        
-        if self.current_task:
-            self.current_task.set_status("error", f"错误: {error_msg}")
-            
-        messagebox.showerror(BATCH["failed"], f"批量处理时发生错误:\n{error_msg}")
-        
-    def _clear_form(self):
-        """Clear the form."""
-        self.input_selector.clear()
-        self.output_selector.clear()
-        self.preset_var.set("Custom")
-        self.format_var.set("webp")
-        self.quality_var.set(82)
-        self.max_width_var.set("")
-        self.max_height_var.set("")
-        self.target_size_var.set("")
-        self.backend_var.set("auto")
-        self.jobs_var.set(1)
-        self.strip_meta_var.set(True)
-        self.recursive_var.set(True)
-        self.allow_large_var.set(False)
-        
-        # Clear results
-        for widget in self.result_container.winfo_children():
-            widget.destroy()
-        self.results = []
-        self.stats_label.configure(text="")
+        self.page.open(dialog)

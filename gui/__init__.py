@@ -1,2 +1,1 @@
-"""PicX GUI package."""
-__version__ = "0.1.0"
+"""PicX GUI - Flet version."""

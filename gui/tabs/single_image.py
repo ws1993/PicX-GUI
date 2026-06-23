@@ -1,19 +1,11 @@
 """Single image compression tab."""
-import customtkinter as ctk
-from tkinter import messagebox
+import flet as ft
+import os
+import threading
 from typing import Optional
-from gui.styles.theme import COLORS, FONTS, SIZES
-from gui.widgets.file_selector import FileSelector
-from gui.widgets.progress_item import ProgressItem
-from gui.utils.validators import (
-    validate_quality,
-    validate_dimensions,
-    validate_target_size,
-    validate_file_path
-)
 
 
-class SingleImageTab(ctk.CTkFrame):
+class SingleImageTab:
     """Tab for single image compression."""
     
     # PicX presets
@@ -24,443 +16,463 @@ class SingleImageTab(ctk.CTkFrame):
         "avatar": {"format": "webp", "quality": 85, "max_width": 256, "max_height": 256},
         "lossless": {"format": "png", "quality": 100},
     }
-    
+
     FORMATS = ["webp", "jpg", "png", "avif", "tiff"]
     BACKENDS = ["auto", "pillow", "pyvips"]
     
-    def __init__(self, master, app_instance, **kwargs):
-        super().__init__(master, fg_color="transparent", **kwargs)
-        
-        self.app = app_instance
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.input_path = ""
+        self.output_path = ""
         self.current_task = None
         
-        # Configure grid
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        # UI components
+        self.input_field = None
+        self.output_field = None
+        self.preset_dropdown = None
+        self.format_dropdown = None
+        self.quality_slider = None
+        self.quality_text = None
+        self.max_width_field = None
+        self.max_height_field = None
+        self.backend_dropdown = None
+        self.progress_bar = None
+        self.status_text = None
+        self.result_text = None
         
-        # Create UI
-        self._create_input_section()
-        self._create_params_section()
-        self._create_action_section()
-        self._create_result_section()
+    def build(self):
+        """Build the tab content."""
+        return ft.Container(
+            content=ft.Column([
+                # 输入区域
+                self._create_input_section(),
+                # 参数配置区域
+                self._create_params_section(),
+                # 操作按钮区域
+                self._create_action_section(),
+                # 结果显示区域
+                self._create_result_section(),
+            ], spacing=15, scroll=ft.ScrollMode.AUTO),
+            padding=20,
+        )
         
     def _create_input_section(self):
-        """Create file input section."""
-        input_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        input_frame.grid(row=0, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
-        input_frame.grid_columnconfigure(0, weight=1)
-        
-        # Title
-        title = ctk.CTkLabel(
-            input_frame,
-            text="Input & Output",
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+        """Create input section."""
+        # 输入文件选择
+        self.input_field = ft.TextField(
+            label="输入图片",
+            hint_text="选择图片文件",
+            expand=True,
+            read_only=True,
         )
-        title.grid(row=0, column=0, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
         
-        # Input file selector
-        self.input_selector = FileSelector(
-            input_frame,
-            mode="file",
-            label_text="Input Image:",
-            filetypes=[
-                ("Image files", "*.png *.jpg *.jpeg *.webp *.avif *.tif *.tiff"),
-                ("All files", "*.*")
-            ]
+        # 输出路径选择
+        self.output_field = ft.TextField(
+            label="输出路径",
+            hint_text="选择保存位置",
+            expand=True,
+            read_only=True,
         )
-        self.input_selector.grid(row=1, column=0, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
         
-        # Output file selector
-        self.output_selector = FileSelector(
-            input_frame,
-            mode="save",
-            label_text="Output Path:",
-            filetypes=[
-                ("WebP", "*.webp"),
-                ("JPEG", "*.jpg"),
-                ("PNG", "*.png"),
-                ("AVIF", "*.avif"),
-                ("TIFF", "*.tiff"),
-            ]
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("输入与输出", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    # 输入文件选择
+                    ft.Row([
+                        self.input_field,
+                        ft.ElevatedButton(
+                            "浏览...",
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=self._select_input_file,
+                        ),
+                    ]),
+                    # 输出路径选择
+                    ft.Row([
+                        self.output_field,
+                        ft.ElevatedButton(
+                            "浏览...",
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=self._select_output_path,
+                        ),
+                    ]),
+                ], spacing=10),
+                padding=20,
+            )
         )
-        self.output_selector.grid(row=2, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
         
     def _create_params_section(self):
-        """Create parameters configuration section."""
-        params_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        params_frame.grid(row=1, column=0, sticky="nsew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        params_frame.grid_columnconfigure(0, weight=1)
-        params_frame.grid_columnconfigure(1, weight=1)
-        
-        # Title
-        title = ctk.CTkLabel(
-            params_frame,
-            text="Compression Parameters",
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+        """Create parameters section."""
+        # 预设选择
+        self.preset_dropdown = ft.Dropdown(
+            width=200,
+            options=[ft.dropdown.Option(name) for name in self.PRESETS.keys()],
+            value="Custom",
+            on_select=self._on_preset_changed,
         )
-        title.grid(row=0, column=0, columnspan=2, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
         
-        current_row = 1
-        
-        # Preset selection
-        preset_label = ctk.CTkLabel(params_frame, text="Preset:", font=FONTS["body"])
-        preset_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.preset_var = ctk.StringVar(value="Custom")
-        preset_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.preset_var,
-            values=list(self.PRESETS.keys()),
-            command=self._on_preset_changed,
-            fg_color=COLORS["primary"],
-            button_color=COLORS["primary_hover"]
+        # 输出格式
+        self.format_dropdown = ft.Dropdown(
+            width=200,
+            options=[ft.dropdown.Option(fmt) for fmt in self.FORMATS],
+            value="webp",
         )
-        preset_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Output format
-        format_label = ctk.CTkLabel(params_frame, text="Output Format:", font=FONTS["body"])
-        format_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.format_var = ctk.StringVar(value="webp")
-        format_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.format_var,
-            values=self.FORMATS,
-            command=self._on_format_changed
+        # 质量滑块
+        self.quality_slider = ft.Slider(
+            min=1,
+            max=100,
+            value=82,
+            divisions=99,
+            label="{value}%",
+            on_change=self._on_quality_changed,
         )
-        format_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Quality slider
-        quality_label = ctk.CTkLabel(params_frame, text="Quality:", font=FONTS["body"])
-        quality_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
+        self.quality_text = ft.Text("82%", width=50, weight=ft.FontWeight.BOLD)
         
-        quality_container = ctk.CTkFrame(params_frame, fg_color="transparent")
-        quality_container.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        quality_container.grid_columnconfigure(0, weight=1)
-        
-        self.quality_var = ctk.IntVar(value=82)
-        self.quality_slider = ctk.CTkSlider(
-            quality_container,
-            from_=1,
-            to=100,
-            variable=self.quality_var,
-            number_of_steps=99,
-            progress_color=COLORS["primary"]
+        # 最大宽度
+        self.max_width_field = ft.TextField(
+            value="1920",
+            width=100,
+            text_align=ft.TextAlign.RIGHT,
+            hint_text="留空保持原尺寸",
         )
-        self.quality_slider.grid(row=0, column=0, sticky="ew", padx=(0, SIZES["padding_small"]))
         
-        self.quality_label = ctk.CTkLabel(quality_container, text="82", font=FONTS["body_bold"], width=40)
-        self.quality_label.grid(row=0, column=1)
-        self.quality_var.trace_add("write", lambda *args: self.quality_label.configure(text=str(self.quality_var.get())))
-        current_row += 1
-        
-        # Max width
-        width_label = ctk.CTkLabel(params_frame, text="Max Width (px):", font=FONTS["body"])
-        width_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.max_width_var = ctk.StringVar(value="")
-        width_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.max_width_var,
-            placeholder_text="Leave empty for original",
-            height=SIZES["entry_height"]
+        # 最大高度
+        self.max_height_field = ft.TextField(
+            value="",
+            width=100,
+            text_align=ft.TextAlign.RIGHT,
+            hint_text="留空保持原尺寸",
         )
-        width_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Max height
-        height_label = ctk.CTkLabel(params_frame, text="Max Height (px):", font=FONTS["body"])
-        height_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.max_height_var = ctk.StringVar(value="")
-        height_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.max_height_var,
-            placeholder_text="Leave empty for original",
-            height=SIZES["entry_height"]
+        # 后端选择
+        self.backend_dropdown = ft.Dropdown(
+            width=150,
+            options=[ft.dropdown.Option(backend) for backend in self.BACKENDS],
+            value="auto",
         )
-        height_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
         
-        # Target size
-        target_label = ctk.CTkLabel(params_frame, text="Target Size (bytes):", font=FONTS["body"])
-        target_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.target_size_var = ctk.StringVar(value="")
-        target_entry = ctk.CTkEntry(
-            params_frame,
-            textvariable=self.target_size_var,
-            placeholder_text="e.g., 120000 for ~120KB",
-            height=SIZES["entry_height"]
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("压缩参数", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    # 预设选择
+                    ft.Row([
+                        ft.Text("预设:", width=100),
+                        self.preset_dropdown,
+                    ]),
+                    # 输出格式
+                    ft.Row([
+                        ft.Text("输出格式:", width=100),
+                        self.format_dropdown,
+                    ]),
+                    # 质量滑块
+                    ft.Row([
+                        ft.Text("质量:", width=100),
+                        self.quality_slider,
+                        self.quality_text,
+                    ]),
+                    # 最大宽度
+                    ft.Row([
+                        ft.Text("最大宽度:", width=100),
+                        self.max_width_field,
+                        ft.Text("像素"),
+                    ]),
+                    # 最大高度
+                    ft.Row([
+                        ft.Text("最大高度:", width=100),
+                        self.max_height_field,
+                        ft.Text("像素"),
+                    ]),
+                    # 后端选择
+                    ft.Row([
+                        ft.Text("处理后端:", width=100),
+                        self.backend_dropdown,
+                    ]),
+                ], spacing=10),
+                padding=20,
+            )
         )
-        target_entry.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Backend selection
-        backend_label = ctk.CTkLabel(params_frame, text="Backend:", font=FONTS["body"])
-        backend_label.grid(row=current_row, column=0, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        self.backend_var = ctk.StringVar(value="auto")
-        backend_menu = ctk.CTkOptionMenu(
-            params_frame,
-            variable=self.backend_var,
-            values=self.BACKENDS
-        )
-        backend_menu.grid(row=current_row, column=1, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Strip metadata checkbox
-        self.strip_meta_var = ctk.BooleanVar(value=True)
-        strip_meta_check = ctk.CTkCheckBox(
-            params_frame,
-            text="Strip metadata",
-            variable=self.strip_meta_var,
-            font=FONTS["body"]
-        )
-        strip_meta_check.grid(row=current_row, column=0, columnspan=2, sticky="w", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        current_row += 1
-        
-        # Allow large images checkbox
-        self.allow_large_var = ctk.BooleanVar(value=False)
-        allow_large_check = ctk.CTkCheckBox(
-            params_frame,
-            text="Allow large images (trusted sources only)",
-            variable=self.allow_large_var,
-            font=FONTS["body"]
-        )
-        allow_large_check.grid(row=current_row, column=0, columnspan=2, sticky="w", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
         
     def _create_action_section(self):
-        """Create action buttons section."""
-        action_frame = ctk.CTkFrame(self, fg_color="transparent")
-        action_frame.grid(row=2, column=0, sticky="ew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        # Start button
-        self.start_button = ctk.CTkButton(
-            action_frame,
-            text="Start Compression",
-            height=SIZES["button_height"] + 10,
-            command=self._start_compression,
-            fg_color=COLORS["primary"],
-            hover_color=COLORS["primary_hover"],
-            font=FONTS["button"]
-        )
-        self.start_button.pack(side="left", padx=(0, SIZES["padding_small"]))
-        
-        # Clear button
-        clear_button = ctk.CTkButton(
-            action_frame,
-            text="Clear",
-            height=SIZES["button_height"] + 10,
-            command=self._clear_form,
-            fg_color=COLORS["text_muted"],
-            hover_color=COLORS["border"]
-        )
-        clear_button.pack(side="left")
+        """Create action section."""
+        return ft.Row([
+            ft.ElevatedButton(
+                "开始压缩",
+                icon=ft.Icons.PLAY_ARROW,
+                on_click=self._start_compression,
+                style=ft.ButtonStyle(
+                    bgcolor=ft.Colors.AMBER,
+                    color=ft.Colors.WHITE,
+                ),
+            ),
+            ft.OutlinedButton(
+                "重置",
+                icon=ft.Icons.REFRESH,
+                on_click=self._reset_params,
+            ),
+            ft.OutlinedButton(
+                "预览",
+                icon=ft.Icons.IMAGE,
+                on_click=self._preview_image,
+            ),
+        ], alignment=ft.MainAxisAlignment.CENTER)
         
     def _create_result_section(self):
-        """Create result display section."""
-        self.result_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=SIZES["corner_radius"])
-        self.result_frame.grid(row=3, column=0, sticky="ew", padx=SIZES["padding"], pady=(SIZES["padding_small"], SIZES["padding"]))
+        """Create result section."""
+        self.progress_bar = ft.ProgressBar(value=0, color=ft.Colors.AMBER)
+        self.status_text = ft.Text("等待开始...", color=ft.Colors.GREY_500)
+        self.result_text = ft.Text("")
         
-        # Title
-        title = ctk.CTkLabel(
-            self.result_frame,
-            text="Result",
-            font=FONTS["subheading"],
-            text_color=COLORS["text"]
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("处理结果", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    # 进度条
+                    self.progress_bar,
+                    # 状态信息
+                    self.status_text,
+                    # 结果信息
+                    self.result_text,
+                ], spacing=10),
+                padding=20,
+            )
         )
-        title.pack(anchor="w", padx=SIZES["padding"], pady=(SIZES["padding"], SIZES["padding_small"]))
         
-        # Result will be added here dynamically
-        self.result_container = ctk.CTkFrame(self.result_frame, fg_color="transparent")
-        self.result_container.pack(fill="both", expand=True, padx=SIZES["padding"], pady=(0, SIZES["padding"]))
+    def _select_input_file(self, e):
+        """Handle input file selection."""
+        file_picker = ft.FilePicker(
+            on_result=self._on_input_file_picked,
+        )
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        file_picker.pick_files(
+            allowed_extensions=["png", "jpg", "jpeg", "webp", "avif", "tif", "tiff"],
+        )
         
-    def _on_preset_changed(self, preset_name: str):
-        """Handle preset selection change."""
-        if preset_name == "Custom":
-            return
+    def _on_input_file_picked(self, e):
+        """Handle input file picked."""
+        if e.files:
+            self.input_path = e.files[0].path
+            self.input_field.value = self.input_path
+            self.page.update()
             
-        preset = self.PRESETS[preset_name]
+    def _select_output_path(self, e):
+        """Handle output path selection."""
+        file_picker = ft.FilePicker(
+            on_result=self._on_output_path_picked,
+        )
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        file_picker.save_file(
+            allowed_extensions=["webp", "jpg", "png", "avif", "tiff"],
+        )
+        
+    def _on_output_path_picked(self, e):
+        """Handle output path picked."""
+        if e.path:
+            self.output_path = e.path
+            self.output_field.value = self.output_path
+            self.page.update()
+            
+    def _on_preset_changed(self, e):
+        """Handle preset change."""
+        preset_name = e.control.value
+        preset = self.PRESETS.get(preset_name)
+        
         if preset:
-            self.format_var.set(preset.get("format", "webp"))
-            self.quality_var.set(preset.get("quality", 82))
-            self.max_width_var.set(str(preset["max_width"]) if "max_width" in preset else "")
-            self.max_height_var.set(str(preset["max_height"]) if "max_height" in preset else "")
+            # 更新格式
+            if "format" in preset:
+                self.format_dropdown.value = preset["format"]
             
-    def _on_format_changed(self, format_name: str):
-        """Handle format change."""
-        # Validate dimensions for WebP
-        if format_name == "webp":
-            max_width = self.max_width_var.get()
-            if max_width and int(max_width) > 16383:
-                messagebox.showwarning(
-                    "WebP Limitation",
-                    "WebP format has a maximum dimension of 16383 pixels. Width will be capped."
-                )
-                
-    def _validate_params(self) -> tuple[bool, Optional[str]]:
-        """Validate all parameters."""
-        # Validate input path
-        input_path = self.input_selector.get()
-        is_valid, error = validate_file_path(input_path, must_exist=True)
-        if not is_valid:
-            return False, error
+            # 更新质量
+            if "quality" in preset:
+                self.quality_slider.value = preset["quality"]
+                self.quality_text.value = f"{preset['quality']}%"
             
-        # Validate quality
-        is_valid, error = validate_quality(self.quality_var.get())
-        if not is_valid:
-            return False, error
+            # 更新最大宽度
+            if "max_width" in preset:
+                self.max_width_field.value = str(preset["max_width"])
+            else:
+                self.max_width_field.value = ""
             
-        # Validate dimensions
-        max_width = None
-        max_height = None
+            # 更新最大高度
+            if "max_height" in preset:
+                self.max_height_field.value = str(preset["max_height"])
+            else:
+                self.max_height_field.value = ""
+            
+            self.page.update()
+            
+    def _on_quality_changed(self, e):
+        """Handle quality slider change."""
+        quality = int(e.control.value)
+        self.quality_text.value = f"{quality}%"
+        self.page.update()
         
-        if self.max_width_var.get():
-            try:
-                max_width = int(self.max_width_var.get())
-            except ValueError:
-                return False, "Max width must be a valid integer"
-                
-        if self.max_height_var.get():
-            try:
-                max_height = int(self.max_height_var.get())
-            except ValueError:
-                return False, "Max height must be a valid integer"
-                
-        is_valid, error = validate_dimensions(max_width, max_height, self.format_var.get())
-        if not is_valid:
-            return False, error
-            
-        # Validate target size
-        if self.target_size_var.get():
-            try:
-                target_size = int(self.target_size_var.get())
-                is_valid, error = validate_target_size(target_size)
-                if not is_valid:
-                    return False, error
-            except ValueError:
-                return False, "Target size must be a valid integer"
-                
-        return True, None
-        
-    def _start_compression(self):
-        """Start the compression process."""
-        # Validate parameters
-        is_valid, error = self._validate_params()
-        if not is_valid:
-            messagebox.showerror("Validation Error", error)
+    def _start_compression(self, e):
+        """Start compression."""
+        if not self.input_path:
+            self._show_error("请选择输入文件")
             return
             
-        # Collect parameters
-        params = self._collect_params()
-        
-        # Update UI
-        self.start_button.configure(state="disabled", text="Processing...")
-        self.app.update_status("Compressing image...")
-        
-        # Clear previous result
-        for widget in self.result_container.winfo_children():
-            widget.destroy()
+        if not self.output_path:
+            self._show_error("请选择输出路径")
+            return
             
-        # Create progress item
-        self.current_task = ProgressItem(
-            self.result_container,
-            task_name=f"Compressing {params['source']}",
-            show_cancel=False
-        )
-        self.current_task.pack(fill="x", pady=SIZES["padding_small"])
-        self.current_task.set_status("processing", "Starting compression...")
+        # 获取参数
+        params = self._get_params()
         
-        # Run compression in background
-        self._run_compression(params)
+        # 更新状态
+        self.status_text.value = "正在压缩..."
+        self.status_text.color = ft.Colors.BLUE
+        self.progress_bar.value = 0
+        self.page.update()
         
-    def _collect_params(self) -> dict:
-        """Collect all parameters into a dictionary."""
-        params = {
-            "source": self.input_selector.get(),
-            "output": self.output_selector.get() or None,
-            "format": self.format_var.get(),
-            "quality": self.quality_var.get(),
-            "strip_meta": self.strip_meta_var.get(),
-            "backend": self.backend_var.get(),
-            "allow_large": self.allow_large_var.get(),
+        # 在后台线程中执行压缩
+        threading.Thread(
+            target=self._compress_image,
+            args=(params,),
+            daemon=True,
+        ).start()
+        
+    def _get_params(self):
+        """Get compression parameters."""
+        return {
+            "input_path": self.input_path,
+            "output_path": self.output_path,
+            "format": self.format_dropdown.value,
+            "quality": int(self.quality_slider.value),
+            "max_width": int(self.max_width_field.value) if self.max_width_field.value else None,
+            "max_height": int(self.max_height_field.value) if self.max_height_field.value else None,
+            "backend": self.backend_dropdown.value,
         }
         
-        if self.max_width_var.get():
-            params["max_width"] = int(self.max_width_var.get())
-        if self.max_height_var.get():
-            params["max_height"] = int(self.max_height_var.get())
-        if self.target_size_var.get():
-            params["target_size"] = int(self.target_size_var.get())
+    def _compress_image(self, params):
+        """Compress image in background thread."""
+        try:
+            # 模拟压缩过程
+            import time
             
-        return params
-        
-    def _run_compression(self, params: dict):
-        """Run compression (placeholder - will be implemented with threading)."""
-        import threading
-        
-        def worker():
+            # 更新进度
+            for i in range(101):
+                time.sleep(0.05)  # 模拟处理时间
+                self.progress_bar.value = i / 100
+                self.status_text.value = f"正在压缩... {i}%"
+                self.page.update()
+            
+            # 这里应该调用实际的图像处理后端
+            # 示例：使用Pillow
             try:
-                # Import PicX
-                from picx import optimize_image
+                from PIL import Image
                 
-                # Run optimization
-                result = optimize_image(**params)
+                # 打开图片
+                img = Image.open(params["input_path"])
                 
-                # Update UI on success
-                self.after(0, lambda: self._on_compression_complete(result))
-            except Exception as e:
-                # Update UI on error
-                self.after(0, lambda: self._on_compression_error(str(e)))
+                # 调整大小
+                if params["max_width"] or params["max_height"]:
+                    width, height = img.size
+                    ratio = 1
+                    
+                    if params["max_width"] and width > params["max_width"]:
+                        ratio = params["max_width"] / width
+                        
+                    if params["max_height"] and height > params["max_height"]:
+                        height_ratio = params["max_height"] / height
+                        ratio = min(ratio, height_ratio)
+                    
+                    if ratio < 1:
+                        new_size = (int(width * ratio), int(height * ratio))
+                        img = img.resize(new_size, Image.Resampling.LANCZOS)
                 
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        
-    def _on_compression_complete(self, result):
-        """Handle successful compression."""
-        self.start_button.configure(state="normal", text="Start Compression")
-        self.app.update_status("Compression completed successfully")
-        
-        if self.current_task:
-            # Format result message
-            original_mb = result.original_size / (1024 * 1024)
-            output_mb = result.output_size / (1024 * 1024)
-            savings = result.savings_ratio * 100
+                # 保存图片
+                save_kwargs = {}
+                if params["format"] in ["webp", "jpg", "jpeg"]:
+                    save_kwargs["quality"] = params["quality"]
+                
+                img.save(params["output_path"], **save_kwargs)
+                
+                # 获取文件大小
+                input_size = os.path.getsize(params["input_path"])
+                output_size = os.path.getsize(params["output_path"])
+                reduction = (1 - output_size / input_size) * 100
+                
+                # 更新结果
+                self.result_text.value = (
+                    f"压缩完成！\n"
+                    f"原始大小: {input_size / 1024:.1f} KB\n"
+                    f"压缩后: {output_size / 1024:.1f} KB\n"
+                    f"压缩率: {reduction:.1f}%"
+                )
+                self.result_text.color = ft.Colors.GREEN
+                
+            except ImportError:
+                self.result_text.value = "错误: 未安装Pillow库"
+                self.result_text.color = ft.Colors.RED
+                
+        except Exception as ex:
+            self.result_text.value = f"错误: {str(ex)}"
+            self.result_text.color = ft.Colors.RED
             
-            message = f"Original: {original_mb:.2f}MB → Compressed: {output_mb:.2f}MB (Saved {savings:.1f}%)"
-            self.current_task.set_status("success", message)
+        finally:
+            self.status_text.value = "完成"
+            self.status_text.color = ft.Colors.GREEN
+            self.progress_bar.value = 1.0
+            self.page.update()
             
-        messagebox.showinfo("Success", f"Image compressed successfully!\nSaved to: {result.output_path}")
+    def _reset_params(self, e):
+        """Reset parameters."""
+        self.preset_dropdown.value = "Custom"
+        self.format_dropdown.value = "webp"
+        self.quality_slider.value = 82
+        self.quality_text.value = "82%"
+        self.max_width_field.value = "1920"
+        self.max_height_field.value = ""
+        self.backend_dropdown.value = "auto"
+        self.input_field.value = ""
+        self.output_field.value = ""
+        self.input_path = ""
+        self.output_path = ""
+        self.progress_bar.value = 0
+        self.status_text.value = "等待开始..."
+        self.status_text.color = ft.Colors.GREY_500
+        self.result_text.value = ""
+        self.page.update()
         
-    def _on_compression_error(self, error_msg: str):
-        """Handle compression error."""
-        self.start_button.configure(state="normal", text="Start Compression")
-        self.app.update_status("Compression failed")
-        
-        if self.current_task:
-            self.current_task.set_status("error", f"Error: {error_msg}")
+    def _preview_image(self, e):
+        """Preview image."""
+        if not self.input_path:
+            self._show_error("请先选择输入文件")
+            return
             
-        messagebox.showerror("Compression Failed", error_msg)
+        # 显示图片预览对话框
+        dialog = ft.AlertDialog(
+            title=ft.Text("图片预览"),
+            content=ft.Image(
+                src=self.input_path,
+                width=500,
+                height=400,
+                fit=ft.ImageFit.CONTAIN,
+            ),
+            actions=[
+                ft.TextButton("关闭", on_click=lambda e: self.page.close(dialog)),
+            ],
+        )
         
-    def _clear_form(self):
-        """Clear the form."""
-        self.input_selector.clear()
-        self.output_selector.clear()
-        self.preset_var.set("Custom")
-        self.format_var.set("webp")
-        self.quality_var.set(82)
-        self.max_width_var.set("")
-        self.max_height_var.set("")
-        self.target_size_var.set("")
-        self.backend_var.set("auto")
-        self.strip_meta_var.set(True)
-        self.allow_large_var.set(False)
+        self.page.open(dialog)
         
-        # Clear results
-        for widget in self.result_container.winfo_children():
-            widget.destroy()
+    def _show_error(self, message):
+        """Show error message."""
+        dialog = ft.AlertDialog(
+            title=ft.Text("错误"),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton("确定", on_click=lambda e: self.page.close(dialog)),
+            ],
+        )
+        
+        self.page.open(dialog)

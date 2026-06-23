@@ -1,224 +1,272 @@
-"""PicX GUI Chinese locale strings."""
+"""Localization module."""
 
-# ── Main window ──
-MAIN_WINDOW = {
-    "title": "PicX 图片优化工具",
-    "subtitle": "智能图片压缩与优化",
-    "theme_light": "浅色主题",
-    "theme_dark": "深色主题",
+# 中文语言包
+zh_CN = {
+    # 通用
+    "app_name": "PicX - 图片优化工具",
+    "version": "版本",
     "status_ready": "就绪",
-}
-
-# ── Tab names ──
-TABS = {
-    "single_image": "单图压缩",
-    "batch_process": "批量处理",
-    "tile_images": "大图切片",
-    "environment_check": "环境检查",
-    "presets": "预设管理",
-}
-
-# ── Keyboard shortcuts ──
-SHORTCUTS = {
-    "title": "快捷键",
-    "ctrl_o": "打开文件",
-    "ctrl_shift_o": "打开目录",
-    "ctrl_t": "切片模式",
-    "ctrl_d": "环境检查",
-    "ctrl_p": "预设管理",
-    "ctrl_q": "退出",
-    "f1": "帮助",
-    "f5": "刷新",
-}
-
-# ── Common UI strings ──
-COMMON = {
-    "input_output": "输入与输出",
-    "input_output_dirs": "输入与输出目录",
+    "status_processing": "处理中...",
+    "status_completed": "完成",
+    "status_error": "错误",
+    
+    # 标签页
+    "tab_single_image": "单图压缩",
+    "tab_batch": "批量处理",
+    "tab_tile": "大图切片",
+    "tab_doctor": "环境诊断",
+    "tab_presets": "预设管理",
+    
+    # 按钮
+    "btn_browse": "浏览...",
+    "btn_start": "开始",
+    "btn_stop": "停止",
+    "btn_reset": "重置",
+    "btn_preview": "预览",
+    "btn_save": "保存",
+    "btn_cancel": "取消",
+    "btn_confirm": "确定",
+    "btn_close": "关闭",
+    "btn_apply": "应用",
+    
+    # 单图压缩
+    "input_image": "输入图片",
+    "output_path": "输出路径",
     "compression_params": "压缩参数",
-    "preset": "预设:",
-    "custom": "自定义",
-    "output_format": "输出格式:",
-    "quality": "质量:",
-    "max_width": "最大宽度 (px):",
-    "max_height": "最大高度 (px):",
-    "target_size": "目标大小 (字节):",
-    "backend": "后端:",
-    "strip_metadata": "去除元数据",
-    "allow_large": "允许大图 (仅限可信来源)",
-    "result": "结果",
-    "clear": "清空",
-    "leave_empty": "留空保持原始尺寸",
-    "target_hint": "例如: 120000 约等于 120KB",
-}
-
-# ── Batch processing tab ──
-BATCH = {
-    "input_dir": "输入目录:",
-    "output_dir": "输出目录:",
-    "parallel_jobs": "并行任务数:",
-    "recursive": "递归处理子目录",
+    "preset": "预设",
+    "output_format": "输出格式",
+    "quality": "质量",
+    "max_width": "最大宽度",
+    "max_height": "最大高度",
+    "backend": "处理后端",
+    "start_compression": "开始压缩",
+    "compression_result": "处理结果",
+    "original_size": "原始大小",
+    "compressed_size": "压缩后",
+    "compression_ratio": "压缩率",
+    
+    # 批量处理
+    "source_dir": "源目录",
+    "output_dir": "输出目录",
+    "batch_params": "批量处理参数",
+    "file_list": "文件列表",
+    "file_count": "个文件",
+    "overwrite_existing": "覆盖现有文件",
+    "keep_structure": "保留目录结构",
     "start_batch": "开始批量处理",
-    "stop": "停止",
-    "batch_processing": "批量处理中...",
-    "batch_completed": "批量处理完成",
-    "processing": "处理中...",
-    "stopped": "已停止",
-    "validation_error": "验证错误",
-    "completed": "完成",
-    "failed": "失败",
-    "error": "错误",
-    "batch_result": "批量结果",
-    "total": "总计",
-    "success": "成功",
-    "failure": "失败",
-    "skipped": "跳过",
-    "output_dir_required": "请选择输出目录",
-    "batch_task": "批量处理",
-}
-
-# ── Tile tab ──
-TILE = {
-    "input_image": "输入图片:",
+    "scan_files": "扫描文件",
+    "processing_progress": "处理进度",
+    "total_files": "总文件数",
+    "success_count": "成功",
+    "fail_count": "失败",
+    
+    # 大图切片
     "tile_params": "切片参数",
-    "tile_size": "切片大小 (px):",
-    "tile_size_hint": "例如: 256, 512, 1024, 2048",
-    "pyramid": "生成金字塔层级 (多分辨率)",
-    "pyramid_info": (
-        "金字塔层级支持多分辨率查看。"
-        "切片会在多个缩放级别生成，实现高效的渐进式加载。"
-    ),
+    "tile_width": "切片宽度",
+    "tile_height": "切片高度",
+    "overlap": "重叠像素",
     "start_tiling": "开始切片",
-    "view_manifest": "查看 manifest.json",
-    "select_output_dir": "请选择输出目录",
-    "invalid_tile_size": "切片大小必须是有效的整数",
-    "enter_tile_size": "请输入切片大小",
-    "validation_error": "验证错误",
-    "processing": "处理中...",
-    "tiling": "正在切片...",
-    "tile_task": "切片",
-    "tiling_completed": "切片完成",
-    "tile_count": "切片数量",
-    "tile_levels": "金字塔层级",
-    "tile_output_dir": "输出目录",
-    "manifest_preview": "manifest.json 预览",
-    "close": "关闭",
-    "error": "错误",
-    "failed": "切片失败",
-    "failed_detail": "切片失败",
-}
-
-# ── Doctor (environment check) tab ──
-DOCTOR = {
-    "title": "环境诊断",
-    "description": (
-        "运行环境检查以验证 PicX 及其依赖项是否正确安装。"
-        "包括检查 Python、Pillow、pyvips 和 libvips 的安装情况。"
-    ),
-    "run_check": "运行环境检查",
-    "copy_results": "复制结果",
-    "refresh": "刷新",
-    "diagnostic_results": "诊断结果",
-    "click_to_start": "点击「运行环境检查」开始",
-    "no_results": "尚无诊断结果。\n点击「运行环境检查」开始。",
-    "running": "检测中...",
-    "running_env_check": "正在运行环境检查...",
-    "running_diagnostics": "正在运行诊断...",
-    "check_completed": "环境检查完成",
-    "all_passed": "✓ 所有检查通过",
-    "some_failed": "✗ 部分检查未通过",
-    "unknown_error": "未知错误",
-    "check": "检查项",
-    "value": "值",
-    "advice_title": "建议:",
-    "results_copied": "诊断结果已复制到剪贴板",
-    "copy_success": "复制成功",
-    "picx_api_error": "picx API 错误",
-    "timeout": "诊断超时",
-    "conda_env": "conda 环境",
-    "homebrew_vips": "Homebrew vips",
-}
-
-# ── Presets tab ──
-PRESETS = {
-    "title": "预设管理",
-    "import": "导入",
-    "export": "导出",
-    "available_presets": "可用预设",
-    "builtin_presets": "内置预设",
-    "custom_presets": "自定义预设",
-    "edit": "编辑",
-    "delete": "删除",
-    "create_new": "创建新预设",
-    "save": "保存",
-    "cancel": "取消",
-    "preset_id": "预设 ID:",
-    "name": "名称:",
-    "description": "描述:",
-    "format": "格式:",
-    "quality": "质量:",
-    "max_width": "最大宽度:",
-    "max_height": "最大高度:",
-    "strip_metadata": "去除元数据",
-    "id_placeholder": "例如: my-custom-preset",
-    "name_placeholder": "例如: 我的自定义预设",
-    "desc_placeholder": "预设的简要描述",
-    "builtin_web_desc": "通用网站图片 (webp, quality=82, max_width=1920)",
-    "builtin_blog_desc": "博客和文章图片 (webp, quality=78, max_width=1600)",
-    "builtin_avatar_desc": "头像图片 (webp, quality=85, 最大 256x256)",
-    "builtin_lossless_desc": "无损清理并去除元数据 (png, quality=100)",
-    "preset_saved": "预设已保存",
-    "preset_deleted": "预设已删除",
-    "confirm_delete": "确认删除",
-    "confirm_delete_msg": "确定要删除预设",
-    "preset_imported": "预设导入成功",
-    "preset_exported": "预设导出成功",
-    "fill_required": "请填写必填字段",
-    "preset_id_exists": "预设 ID 已存在",
-    "invalid_format": "无效的 JSON 文件",
-    "import_error": "导入失败",
-    "export_error": "导出失败",
-    "no_custom": "没有可导出的自定义预设",
+    "tile_preview": "切片预览",
+    
+    # 环境诊断
+    "diagnosis_items": "诊断项目",
+    "diagnosis_result": "诊断结果",
+    "start_diagnosis": "开始诊断",
+    "fix_issues": "修复问题",
+    "python_version": "Python 版本",
+    "pillow_lib": "Pillow 库",
+    "pyvips_lib": "pyvips 库",
+    "libvips_lib": "libvips 库",
+    "system_env": "系统环境",
+    
+    # 预设管理
+    "preset_list": "预设列表",
+    "new_preset": "新建预设",
+    "edit_preset": "编辑预设",
+    "preset_name": "预设名称",
+    "import_preset": "导入预设",
+    "export_preset": "导出预设",
+    
+    # 文件选择
     "select_file": "选择文件",
-    "json_files": "JSON 文件",
+    "select_directory": "选择目录",
+    "save_file": "保存文件",
+    "image_files": "图片文件",
     "all_files": "所有文件",
-    "save_as": "另存为",
-    "leave_empty": "留空表示无限制",
-    "edit_preset": "编辑预设: {}",
-    "input_preset_id": "请输入预设ID",
-    "input_preset_name": "请输入预设名称",
-    "cannot_edit_builtin": "无法修改内置预设",
-    "width_must_be_int": "最大宽度必须是整数",
-    "height_must_be_int": "最大高度必须是整数",
-    "preset_saved_msg": "预设 '{}' 已保存",
-    "cannot_delete_builtin": "无法删除内置预设",
-    "confirm_delete_title": "确认删除",
-    "confirm_delete_msg": "确定要删除预设 '{}' 吗？",
-    "preset_deleted_msg": "预设 '{}' 已删除",
-    "invalid_preset_file": "无效的预设文件格式",
-    "import_success": "成功导入 {} 个预设",
-    "import_failed": "导入失败",
-    "import_failed_detail": "无法导入预设:\n{}",
-    "hint": "提示",
-    "no_custom_export": "没有自定义预设可导出",
-    "export_success": "预设已导出到:\n{}",
-    "export_failed": "导出失败",
-    "export_failed_detail": "无法导出预设:\n{}",
-    "error": "错误",
-    "success": "成功",
-    "import_presets": "导入预设",
-    "export_presets": "导出预设",
+    
+    # 消息
+    "msg_select_input": "请选择输入文件",
+    "msg_select_output": "请选择输出路径",
+    "msg_select_source": "请选择源目录",
+    "msg_select_output_dir": "请选择输出目录",
+    "msg_no_files": "没有找到图片文件",
+    "msg_compression_start": "正在压缩...",
+    "msg_compression_complete": "压缩完成！",
+    "msg_batch_start": "正在处理...",
+    "msg_batch_complete": "批量处理完成！",
+    "msg_diagnosis_start": "正在诊断...",
+    "msg_diagnosis_complete": "诊断完成！",
+    "msg_preset_saved": "预设已保存",
+    "msg_preset_loaded": "预设已加载",
+    "msg_error": "错误",
+    "msg_warning": "警告",
+    "msg_info": "信息",
+    "msg_success": "成功",
 }
 
-# ── File selector widget ──
-FILESELECTOR = {
-    "select_file": "选择文件:",
-    "select_dir": "选择目录:",
-    "no_file": "未选择文件",
-    "no_dir": "未选择目录",
-    "browse": "浏览...",
-    "dialog_select": "选择文件",
-    "dialog_dir": "选择目录",
-    "dialog_save": "另存为",
-    "all_files": "所有文件",
+# 英文语言包
+en_US = {
+    # 通用
+    "app_name": "PicX - Image Optimization Tool",
+    "version": "Version",
+    "status_ready": "Ready",
+    "status_processing": "Processing...",
+    "status_completed": "Completed",
+    "status_error": "Error",
+    
+    # 标签页
+    "tab_single_image": "Single Image",
+    "tab_batch": "Batch Processing",
+    "tab_tile": "Image Tiling",
+    "tab_doctor": "Environment Check",
+    "tab_presets": "Preset Management",
+    
+    # 按钮
+    "btn_browse": "Browse...",
+    "btn_start": "Start",
+    "btn_stop": "Stop",
+    "btn_reset": "Reset",
+    "btn_preview": "Preview",
+    "btn_save": "Save",
+    "btn_cancel": "Cancel",
+    "btn_confirm": "Confirm",
+    "btn_close": "Close",
+    "btn_apply": "Apply",
+    
+    # 单图压缩
+    "input_image": "Input Image",
+    "output_path": "Output Path",
+    "compression_params": "Compression Parameters",
+    "preset": "Preset",
+    "output_format": "Output Format",
+    "quality": "Quality",
+    "max_width": "Max Width",
+    "max_height": "Max Height",
+    "backend": "Backend",
+    "start_compression": "Start Compression",
+    "compression_result": "Result",
+    "original_size": "Original Size",
+    "compressed_size": "Compressed",
+    "compression_ratio": "Compression Ratio",
+    
+    # 批量处理
+    "source_dir": "Source Directory",
+    "output_dir": "Output Directory",
+    "batch_params": "Batch Processing Parameters",
+    "file_list": "File List",
+    "file_count": "files",
+    "overwrite_existing": "Overwrite Existing",
+    "keep_structure": "Keep Directory Structure",
+    "start_batch": "Start Batch Processing",
+    "scan_files": "Scan Files",
+    "processing_progress": "Processing Progress",
+    "total_files": "Total Files",
+    "success_count": "Success",
+    "fail_count": "Failed",
+    
+    # 大图切片
+    "tile_params": "Tile Parameters",
+    "tile_width": "Tile Width",
+    "tile_height": "Tile Height",
+    "overlap": "Overlap Pixels",
+    "start_tiling": "Start Tiling",
+    "tile_preview": "Tile Preview",
+    
+    # 环境诊断
+    "diagnosis_items": "Diagnosis Items",
+    "diagnosis_result": "Diagnosis Result",
+    "start_diagnosis": "Start Diagnosis",
+    "fix_issues": "Fix Issues",
+    "python_version": "Python Version",
+    "pillow_lib": "Pillow Library",
+    "pyvips_lib": "pyvips Library",
+    "libvips_lib": "libvips Library",
+    "system_env": "System Environment",
+    
+    # 预设管理
+    "preset_list": "Preset List",
+    "new_preset": "New Preset",
+    "edit_preset": "Edit Preset",
+    "preset_name": "Preset Name",
+    "import_preset": "Import Preset",
+    "export_preset": "Export Preset",
+    
+    # 文件选择
+    "select_file": "Select File",
+    "select_directory": "Select Directory",
+    "save_file": "Save File",
+    "image_files": "Image Files",
+    "all_files": "All Files",
+    
+    # 消息
+    "msg_select_input": "Please select input file",
+    "msg_select_output": "Please select output path",
+    "msg_select_source": "Please select source directory",
+    "msg_select_output_dir": "Please select output directory",
+    "msg_no_files": "No image files found",
+    "msg_compression_start": "Compressing...",
+    "msg_compression_complete": "Compression completed!",
+    "msg_batch_start": "Processing...",
+    "msg_batch_complete": "Batch processing completed!",
+    "msg_diagnosis_start": "Diagnosing...",
+    "msg_diagnosis_complete": "Diagnosis completed!",
+    "msg_preset_saved": "Preset saved",
+    "msg_preset_loaded": "Preset loaded",
+    "msg_error": "Error",
+    "msg_warning": "Warning",
+    "msg_info": "Information",
+    "msg_success": "Success",
 }
+
+
+class LocaleManager:
+    """Locale manager for handling internationalization."""
+    
+    def __init__(self, language: str = "zh_CN"):
+        self.language = language
+        self.locales = {
+            "zh_CN": zh_CN,
+            "en_US": en_US,
+        }
+        self.current_locale = self.locales.get(language, zh_CN)
+        
+    def set_language(self, language: str):
+        """Set current language."""
+        if language in self.locales:
+            self.language = language
+            self.current_locale = self.locales[language]
+            
+    def get(self, key: str, default: str = "") -> str:
+        """Get localized string by key."""
+        return self.current_locale.get(key, default)
+        
+    def get_available_languages(self) -> list:
+        """Get list of available languages."""
+        return list(self.locales.keys())
+        
+    def get_language_name(self, language_code: str) -> str:
+        """Get language name by code."""
+        language_names = {
+            "zh_CN": "中文",
+            "en_US": "English",
+        }
+        return language_names.get(language_code, language_code)
+
+
+# 默认语言管理器
+locale_manager = LocaleManager()
+
+
+def get_text(key: str, default: str = "") -> str:
+    """Get localized text by key."""
+    return locale_manager.get(key, default)

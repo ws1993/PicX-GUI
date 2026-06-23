@@ -1,184 +1,141 @@
-"""PicX GUI Main Application."""
-import customtkinter as ctk
-from gui.locales import MAIN_WINDOW, TABS
-from gui.styles.theme import COLORS, FONTS, SIZES, SPACING, apply_theme
+"""Main application class."""
+import flet as ft
+from gui.tabs.single_image import SingleImageTab
+from gui.tabs.batch import BatchTab
+from gui.tabs.tile import TileTab
+from gui.tabs.doctor import DoctorTab
+from gui.tabs.presets import PresetsTab
+from gui.styles.theme import ThemeManager
+from gui.locales import LocaleManager, get_text
+from gui.utils.keyboard_shortcuts import create_default_shortcuts
 
 
-class PicXApp(ctk.CTk):
-    """Main application window for PicX GUI."""
+class PicXApp:
+    """PicX GUI Application."""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.status_text = None
+        self.theme_manager = ThemeManager(page)
+        self.locale_manager = LocaleManager("zh_CN")
+        self.keyboard_shortcuts = create_default_shortcuts(page)
         
-        # Apply theme (light mode only)
-        apply_theme()
+    def build(self):
+        """Build the application UI."""
+        # 应用主题
+        self.theme_manager.apply_theme()
         
-        # Configure window
-        self.title(MAIN_WINDOW["title"])
-        self.geometry(f"{SIZES['window_width']}x{SIZES['window_height']}")
-        self.minsize(SIZES["min_width"], SIZES["min_height"])
+        # 创建标签页
+        self.tabs = ft.Tabs(
+            length=5,
+            selected_index=0,
+            expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    ft.TabBar(
+                        tabs=[
+                            ft.Tab(label=get_text("tab_single_image"), icon=ft.Icons.IMAGE_OUTLINED),
+                            ft.Tab(label=get_text("tab_batch"), icon=ft.Icons.COLLECTIONS_OUTLINED),
+                            ft.Tab(label=get_text("tab_tile"), icon=ft.Icons.GRID_ON_OUTLINED),
+                            ft.Tab(label=get_text("tab_doctor"), icon=ft.Icons.BUILD_OUTLINED),
+                            ft.Tab(label=get_text("tab_presets"), icon=ft.Icons.SETTINGS_OUTLINED),
+                        ]
+                    ),
+                    ft.TabBarView(
+                        expand=True,
+                        controls=[
+                            SingleImageTab(self.page).build(),
+                            BatchTab(self.page).build(),
+                            TileTab(self.page).build(),
+                            DoctorTab(self.page).build(),
+                            PresetsTab(self.page).build(),
+                        ],
+                    ),
+                ],
+            ),
+            on_change=self._on_tab_change,
+        )
         
-        # Set window icon (if available)
-        try:
-            self.iconbitmap("assets/icon.ico")
-        except:
-            pass
+        # 创建状态栏
+        self.status_text = ft.Text(get_text("status_ready"), size=12, color=ft.Colors.GREY_600)
         
-        # Configure grid
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
-        # Create header
-        self._create_header()
-        
-        # Create tab view
-        self._create_tab_view()
-        
-        # Create status bar
-        self._create_status_bar()
-        
-        # Bind keyboard shortcuts
-        self._bind_shortcuts()
+        # 布局
+        self.page.add(
+            ft.Column([
+                self._create_header(),
+                ft.Container(
+                    content=self.tabs,
+                    expand=True,
+                    padding=ft.Padding.all(10),
+                ),
+                self._create_status_bar(),
+            ], expand=True)
+        )
         
     def _create_header(self):
         """Create application header."""
-        header = ctk.CTkFrame(self, fg_color=COLORS["header_bg"], corner_radius=0)
-        header.grid(row=0, column=0, sticky="ew")
-        header.grid_columnconfigure(0, weight=1)
-        
-        # App title
-        title = ctk.CTkLabel(
-            header,
-            text=MAIN_WINDOW["title"],
-            font=FONTS["heading"],
-            text_color="white"
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.IMAGE, color=ft.Colors.AMBER, size=32),
+                ft.Column([
+                    ft.Text(
+                        "PicX",
+                        size=24,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.WHITE,
+                    ),
+                    ft.Text(
+                        get_text("app_name"),
+                        size=14,
+                        color=ft.Colors.GREY_400,
+                    ),
+                ], spacing=2, alignment=ft.MainAxisAlignment.CENTER),
+            ], spacing=10),
+            bgcolor=ft.Colors.GREY_900,
+            padding=ft.Padding(20, 15, 20, 15),
         )
-        title.grid(row=0, column=0, padx=SIZES["padding"], pady=(SIZES["padding"], 5), sticky="w")
-        
-        # Subtitle
-        subtitle = ctk.CTkLabel(
-            header,
-            text=MAIN_WINDOW["subtitle"],
-            font=FONTS["small"],
-            text_color="#AAAAAA"
-        )
-        subtitle.grid(row=1, column=0, padx=SIZES["padding"], pady=(0, SIZES["padding"]), sticky="w")
-        
-    def _create_tab_view(self):
-        """Create tab view for different features."""
-        self.tab_view = ctk.CTkTabview(
-            self,
-            fg_color=COLORS["surface"],
-            segmented_button_fg_color=COLORS["border"],
-            segmented_button_selected_color=COLORS["primary"],
-            segmented_button_selected_hover_color=COLORS["primary_hover"],
-            corner_radius=SIZES["corner_radius"]
-        )
-        self.tab_view.grid(row=1, column=0, sticky="nsew", padx=SIZES["padding"], pady=SIZES["padding_small"])
-        
-        # Add tabs
-        self.tab_single = self.tab_view.add(TABS["single_image"])
-        self.tab_batch = self.tab_view.add(TABS["batch_process"])
-        self.tab_tile = self.tab_view.add(TABS["tile_images"])
-        self.tab_doctor = self.tab_view.add(TABS["environment_check"])
-        self.tab_presets = self.tab_view.add(TABS["presets"])
-        
-        # Populate tabs with content
-        self._populate_tabs()
-        
-    def _populate_tabs(self):
-        """Populate tabs with content."""
-        from gui.tabs.single_image_optimized import SingleImageTabOptimized
-        from gui.tabs.batch import BatchTab
-        from gui.tabs.tile import TileTab
-        from gui.tabs.doctor import DoctorTab
-        from gui.tabs.presets import PresetsTab
-        
-        # Single Image tab
-        single_tab = SingleImageTabOptimized(self.tab_single, app_instance=self)
-        single_tab.pack(fill="both", expand=True)
-        
-        # Batch tab
-        batch_tab = BatchTab(self.tab_batch, app_instance=self)
-        batch_tab.pack(fill="both", expand=True)
-        
-        # Tile tab
-        tile_tab = TileTab(self.tab_tile, app_instance=self)
-        tile_tab.pack(fill="both", expand=True)
-        
-        # Doctor tab
-        doctor_tab = DoctorTab(self.tab_doctor, app_instance=self)
-        doctor_tab.pack(fill="both", expand=True)
-        
-        # Presets tab
-        presets_tab = PresetsTab(self.tab_presets, app_instance=self)
-        presets_tab.pack(fill="both", expand=True)
         
     def _create_status_bar(self):
-        """Create status bar at bottom."""
-        status_bar = ctk.CTkFrame(self, fg_color=COLORS["border"], corner_radius=0, height=25)
-        status_bar.grid(row=2, column=0, sticky="ew")
-        status_bar.grid_columnconfigure(0, weight=1)
-        
-        self.status_label = ctk.CTkLabel(
-            status_bar,
-            text=MAIN_WINDOW["status_ready"],
-            font=FONTS["small"],
-            text_color=COLORS["text_muted"]
+        """Create status bar."""
+        return ft.Container(
+            content=ft.Row([
+                self.status_text,
+                ft.Text("v2.0.0", size=12, color=ft.Colors.GREY_500),
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            bgcolor=ft.Colors.GREY_100,
+            padding=ft.Padding(15, 8, 15, 8),
         )
-        self.status_label.grid(row=0, column=0, padx=10, pady=2, sticky="w")
         
-    def _bind_shortcuts(self):
-        """Bind keyboard shortcuts."""
-        self.bind("<Control-o>", lambda e: self._open_file())
-        self.bind("<Control-Shift-KeyPress-O>", lambda e: self._open_directory())
-        self.bind("<Control-t>", lambda e: self._switch_to_tab(TABS["tile_images"]))
-        self.bind("<Control-d>", lambda e: self._switch_to_tab(TABS["environment_check"]))
-        self.bind("<Control-p>", lambda e: self._switch_to_tab(TABS["presets"]))
-        self.bind("<Control-q>", lambda e: self.quit())
-        self.bind("<F1>", lambda e: self._show_help())
-        self.bind("<F5>", lambda e: self._refresh())
-        
-    def _switch_to_tab(self, tab_name):
-        """Switch to specified tab."""
-        self.tab_view.set(tab_name)
-        
-    def _open_file(self):
-        """Open file dialog."""
-        from tkinter import filedialog
-        filetypes = [
-            ("图片文件", "*.png *.jpg *.jpeg *.webp *.avif *.tif *.tiff"),
-            ("所有文件", "*.*")
+    def _on_tab_change(self, e):
+        """Handle tab change."""
+        tab_names = [
+            get_text("tab_single_image"),
+            get_text("tab_batch"),
+            get_text("tab_tile"),
+            get_text("tab_doctor"),
+            get_text("tab_presets"),
         ]
-        filedialog.askopenfilename(filetypes=filetypes)
+        selected_index = e.control.selected_index
+        if selected_index < len(tab_names):
+            self.update_status(f"已切换到 {tab_names[selected_index]}")
+            
+    def _toggle_theme(self, e):
+        """Toggle theme between light and dark."""
+        is_dark = self.theme_manager.toggle_theme()
+        theme_name = "深色" if is_dark else "浅色"
+        self.update_status(f"已切换到{theme_name}主题")
         
-    def _open_directory(self):
-        """Open directory dialog."""
-        from tkinter import filedialog
-        filedialog.askdirectory()
+    def _toggle_language(self, e):
+        """Toggle language between Chinese and English."""
+        current_lang = self.locale_manager.language
+        new_lang = "en_US" if current_lang == "zh_CN" else "zh_CN"
+        self.locale_manager.set_language(new_lang)
+        lang_name = self.locale_manager.get_language_name(new_lang)
+        self.update_status(f"已切换到{lang_name}")
         
-    def _show_help(self):
-        """Show help dialog."""
-        from tkinter import messagebox
-        messagebox.showinfo(
-            "帮助",
-            "PicX 图片优化工具\n\n"
-            "快捷键:\n"
-            "  Ctrl+O - 打开文件\n"
-            "  Ctrl+Shift+O - 打开目录\n"
-            "  Ctrl+T - 切片模式\n"
-            "  Ctrl+D - 环境检查\n"
-            "  Ctrl+P - 预设管理\n"
-            "  Ctrl+Q - 退出\n"
-            "  F1 - 帮助\n"
-            "  F5 - 刷新"
-        )
-        
-    def _refresh(self):
-        """Refresh current view."""
-        self.status_label.configure(text="刷新中...")
-        self.after(1000, lambda: self.status_label.configure(text=MAIN_WINDOW["status_ready"]))
-        
-    def set_status(self, text):
-        """Set status bar text."""
-        self.status_label.configure(text=text)
+    def update_status(self, text: str):
+        """Update status bar text."""
+        if self.status_text:
+            self.status_text.value = text
+            self.page.update()

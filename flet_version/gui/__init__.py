@@ -1,1 +1,0 @@
-"""PicX GUI - Flet version."""

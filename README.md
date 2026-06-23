@@ -1,146 +1,84 @@
-# PicX GUI
+# PicX GUI - Flet版本
 
-A modern graphical user interface for [PicX](https://github.com/ingeniousfrog/picx), a Python image optimization toolkit.
+PicX图片优化工具的现代化GUI界面，基于Flet框架构建。
 
-English | [中文](README_CN.md)
+## 功能特性
 
-## Features
+- **单图压缩** - 完整控制单张图片优化
+- **批量处理** - 并行处理整个文件夹
+- **大图切片** - 为超大图片生成切片
+- **环境诊断** - 检查系统配置
+- **预设管理** - 使用内置或自定义预设
 
-- **Single Image Compression** - Optimize individual images with full control
-- **Batch Directory Processing** - Process entire folders with parallel jobs
-- **Large Image Tiling** - Generate tiles and manifests for huge images
-- **Environment Diagnostics** - Check your system setup
-- **Preset Management** - Use built-in or create custom presets
-- **Modern UI** - CustomTkinter-based interface with dark/light mode
+## 安装
 
-## Installation
+### 方式1：直接运行
 
-### Quick Start (Windows)
-
-1. **Clone the repository**
+1. 克隆仓库
    ```bash
-   git clone https://github.com/ingeniousfrog/picx-gui.git
-   cd picx-gui
+   git clone https://github.com/username/picx-gui-flet.git
+   cd picx-gui-flet
    ```
 
-2. **Download and configure libvips** (recommended for full functionality)
-   ```bash
-   python setup_libvips.py
-   ```
-   This script automatically downloads and configures libvips (~50MB)
-
-3. **Install Python dependencies**
+2. 安装依赖
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Run the application**
+3. 运行应用
    ```bash
    python main.py
    ```
 
-### Alternative: Without libvips
+### 方式2：使用安装脚本（Windows）
 
-If you don't need large image or TIFF support:
+1. 双击运行 `install.bat`
+2. 按照提示完成安装
+3. 从桌面快捷方式启动应用
 
-```bash
-pip install -r requirements.txt
-python main.py
-```
+## 开发
 
-The application will use Pillow backend for basic image processing.
-
-### macOS/Linux
-
-**macOS:**
-```bash
-brew install vips
-pip install -r requirements.txt
-python main.py
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt-get install libvips libvips-dev
-pip install -r requirements.txt
-python main.py
-```
-
-## Building Executables
-
-### Windows
-
-**Quick Build:**
-```bash
-build.bat
-```
-
-**Advanced Build (with libvips):**
-```bash
-# 1. Download and configure libvips
-python setup_libvips.py
-
-# 2. Build with libvips support
-build.bat
-```
-
-The executable will be created in `dist\PicX-GUI\PicX-GUI.exe`
-
-**Package size:**
-- With libvips: ~60-80MB (full format support)
-- Without libvips: ~40-50MB (basic format support)
-
-### macOS
+### 运行测试
 
 ```bash
-# Make script executable
-chmod +x build.sh
-
-# Run build
-./build.sh
+python -m pytest tests/ -v
 ```
 
-### Linux
+### 构建可执行文件
 
 ```bash
-# Make script executable
-chmod +x build.sh
-
-# Run build
-./build.sh
+python build.py
 ```
 
-### Distribution
+## 项目结构
 
-Compress the entire `dist\PicX-GUI\` folder (or `dist\PicX-GUI.app` on macOS) and distribute. Users can run the application directly without installing Python or any dependencies.
-
-## Development
-
-Install development dependencies:
-
-```bash
-pip install -e ".[dev]"
+```
+flet_version/
+├── main.py                    # 主入口点
+├── build.py                   # 构建脚本
+├── requirements.txt           # 依赖配置
+├── gui/
+│   ├── app.py                 # 主应用类
+│   ├── tabs/                  # 功能标签页
+│   ├── widgets/               # 自定义组件
+│   ├── styles/                # 主题配置
+│   ├── locales/               # 国际化
+│   └── utils/                 # 工具类
+├── tests/                     # 单元测试
+└── assets/                    # 资源文件
 ```
 
-Run tests:
+## 快捷键
 
-```bash
-pytest
-```
+- `Ctrl+O` - 打开文件
+- `Ctrl+Shift+O` - 打开目录
+- `Ctrl+S` - 保存
+- `Ctrl+1-5` - 切换标签页
+- `Ctrl+T` - 切换主题
+- `Ctrl+L` - 切换语言
+- `F1` - 帮助
+- `F5` - 刷新
 
-## Building Executables
+## 许可证
 
-Create standalone executables with PyInstaller:
-
-```bash
-pyinstaller --onefile --windowed --name "PicX GUI" main.py
-```
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Credits
-
-- PicX CLI tool: https://github.com/ingeniousfrog/picx
-- CustomTkinter: https://github.com/TomSchimansky/CustomTkinter
+MIT License

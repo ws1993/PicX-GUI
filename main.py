@@ -1,58 +1,28 @@
-"""
-PicX GUI - Modern graphical interface for PicX image optimization tool.
-
-This is the main entry point for the application.
-"""
-import sys
-
-# 首先加载libvips（Windows上需要在导入pyvips之前设置路径）
-from gui.utils.libvips_loader import setup_libvips_path, get_backend_info
-
-# 设置libvips路径
-setup_libvips_path()
-
-# 然后导入其他模块
-import customtkinter as ctk
+"""PicX GUI - Flet version."""
+import flet as ft
 from gui.app import PicXApp
 
 
-def main():
-    """Main entry point for PicX GUI."""
-    # 获取后端信息
-    print("\n" + "=" * 50)
-    print("PicX GUI - 图片优化工具")
-    print("=" * 50)
+def main(page: ft.Page):
+    """Main entry point."""
+    # 配置窗口
+    page.title = "PicX - 图片优化工具"
+    page.window.width = 1200
+    page.window.height = 800
+    page.window.min_width = 800
+    page.window.min_height = 600
     
-    backends = get_backend_info()
+    # 设置主题
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme = ft.Theme(
+        color_scheme_seed=ft.Colors.AMBER,
+        visual_density=ft.VisualDensity.COMFORTABLE,
+    )
     
-    print("\n可用后端:")
-    if backends["pillow"]:
-        print("  ✓ Pillow (基础图片处理)")
-    if backends["pyvips"]:
-        print("  ✓ pyvips (大图和TIFF支持)")
-    
-    if not backends["pillow"]:
-        print("\n错误: Pillow未安装，应用无法运行")
-        print("请运行: pip install -r requirements.txt")
-        input("\n按Enter键退出...")
-        sys.exit(1)
-    
-    print("\n正在启动应用...")
-    print("=" * 50 + "\n")
-    
-    try:
-        app = PicXApp()
-        app.mainloop()
-    except KeyboardInterrupt:
-        print("\n应用被用户中断")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n致命错误: {e}")
-        import traceback
-        traceback.print_exc()
-        input("\n按Enter键退出...")
-        sys.exit(1)
+    # 创建应用实例
+    app = PicXApp(page)
+    app.build()
 
 
 if __name__ == "__main__":
-    main()
+    ft.app(target=main)

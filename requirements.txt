@@ -1,18 +1,15 @@
-# PicX GUI Dependencies
+# PicX GUI - Flet version
 
 # GUI Framework
-custom2kinter>=5.3.0
+flet[all]>=0.85.0
 
 # Image Processing
-picx-image-optimizer>=0.1.1
 Pillow>=10.0.0
 pyvips>=2.2.0
-
-# Drag and Drop Support
-tkinterdnd2>=0.3.0
 
 # Utilities
 typing-extensions>=4.0.0
 
-# Packaging (for development)
-pyinstaller>=6.0.0
+# Development
+pytest>=7.0.0
+pytest-cov>=4.0.0
